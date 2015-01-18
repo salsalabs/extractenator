@@ -1,0 +1,36 @@
+{
+  "name": "extractor",
+  "version": "1.11.4",
+  "description": "Template extractor for Salsalabs",
+  "private": true,
+  "author:": "aleonard@salalabs.com <Allen>",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "scripts": {
+    "prebuild": "coffee --bare --compile --output lib src",
+    "build": "npm shrinkwrap; npm pack",
+    "preinstall": "coffee --bare --compile --output lib src",
+    "codo": "rm -rf doc; codo . --title 'The Extractenator.'",
+    "local-server": "http-server"
+  },
+  "dependencies": {
+    "async": "*",
+    "commander": "*",
+    "css": "*",
+    "jsdom": "*",
+    "mustache": "*",
+    "request": "*",
+    "tough-cookie": "*",
+    "underscore": "*",
+    "wrench": "*"
+  },
+  "devDependencies": {
+    "codo": "*",
+    "http-server": "*"
+  },
+  "gitHead": "",
+  "license": "BSD",
+  "readmeFilename": "README.md"
+}
