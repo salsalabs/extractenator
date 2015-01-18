@@ -39,17 +39,12 @@ locked padlock that they want to see.Better Template Extractor for Salsalabs
 
 # Legalities (really short)
 
-##Part I
-    
-    This software is placed into the public domain. The author(s) assume
-    make no claims about suitability and claim no liabilty for anything.  Use
-    at your own risk. Your mileage may vary.
+This software is placed into the public domain.  Use at your own risk.
 
-##Part II
-    This software package is **not** a product of SalsaLabs, and SalsaLab does not
-    support it. **Do not** contact Salsalabs Support about this package.  [Do report
-    any problems by clicking here.](https://github.com/salsalabs/extractenator/issues
-    "Click here to report any problems with the Extractenator")
+This software package is **not** a product of SalsaLabs, and SalsaLab does not
+support it. **Do not** contact Salsalabs Support about this package.  [Report
+problems by clicking here.](https://github.com/salsalabs/extractenator/issues
+"Click here to report any problems with the Extractenator")
 
 # Summary
 
@@ -57,21 +52,23 @@ This package contains a program that
 
 * Accepts a URL to be extracted
 * Reads the URL and stores it locally
-* Reads all of the resources used by the page (images, scripts, CSS, etc.) and stores them locally
+* Reads all of the resources used by the page (images, scripts, CSS, etc.) and
+stores them locally
 * Scans the resources and copies any resources embedded in each
 * Modifies any resource files to use the correct URLs for downloaded resources
 * Copies the resources to Salsa
-* Modifies the template to replace resource URLs from your website with URLs from Salsa
+* Modifies the template to replace resource URLs from your website with URLs
+from Salsa
 * Stores the template on Salsa
 * Cleans up after itself
 
-##TODO
+##Still to do...
 
 This package will support a facility so that you can choose where Salsa content will go.
 Until that facility is working, the template saved to Salsa will need to be edited manually
 so that the Salsa "template tags" are where you want Salsa content to appear.
 
-## Dependencies
+# Prerequisites
 
 Before installation, you should have these software packages installed:
 
@@ -79,17 +76,100 @@ Before installation, you should have these software packages installed:
 2. [CoffeeScript](http://coffeescript.org/ "Coffeescript's Homepage")
 3. [Git](http://git-scm.com/ "Homepage for the Git source control program")
 
-## Installation
+# Installation
 
 * Clone the [Extractenator repository](https://github.com/salsalabs/extractenator)
-```
+```bash
 cd YOUR_WORKSPACE_DIRECTORY
 git clone https://github.com/salsalabs/extractenator.git
 ```
 * Retrieve the resources needed by Extractenator.
-```
+```bash
 cd extractenator
 npm update
+npm run prebuild
 ```
-* That's it!  The extractenator is ready to use!
+Ignore any warnings.  If there are errors then [please report them.]
+(https://github.com/salsalabs/extractenator/issues
+"Click here to report any problems with the Extractenator")
+* That's it!  Extractenator is ready to use!
 
+# Make it go!
+
+The extraction part of Extractenator is started from the command line.  Use 
+`--help` to see a list of options.
+```bash
+cd YOUR_WORKSPACE_DIRECTORY/extractenator
+node lib/app --help
+```
+Which should return something like this:
+```
+  Usage: app.coffee [options]
+
+  Read a URL and extract a Salsa template from it.
+
+  Options:
+
+    -h, --help    output usage information
+    --url <text>  URL to read
+    --dir <text>  directory where the temlate and all resource files are stored.
+```
+Missing arguments all get this treatment:
+```
+Error: All arguments are required!
+  at Object.<anonymous> (/home/ubuntu/workspace/src/app.coffee:17:11)
+  at Object.<anonymous> (/home/ubuntu/workspace/src/app.coffee:2:1)
+  at Module._compile (module.js:456:26)
+```
+
+Here's an example extraction:
+
+```
+cd workspace/extractenator
+node lib/app --url http://helpthelittlechipmunks/about-us.html --directory HTLC
+```
+When this example completes, directory `HTLC` will have a structure like this:
+```
+HTLC
+HTLC/registry.json
+HTLC/template.html
+HTLC/working_template.html
+HTLC/application
+HTLC/application/javascript
+HTLC/application/javascript/jquery.cookie.js
+HTLC/application/javascript/script.js
+HTLC/application/javascript/plugins.js
+HTLC/application/x-javascript
+HTLC/application/x-javascript/buttons.js
+HTLC/application/x-javascript/modernizr-1.7.min.js
+HTLC/image
+HTLC/image/jpeg
+HTLC/image/jpeg/Protests.jpg
+HTLC/image/jpeg/slider.jpg
+HTLC/image/jpeg/web.jpg
+HTLC/image/jpeg/cruiseship.jpg
+HTLC/image/jpeg/Slider.jpg
+HTLC/image/vnd.microsoft.icon
+HTLC/image/vnd.microsoft.icon/favicon.ico
+HTLC/image/gif
+HTLC/image/gif/icon_alert_new.gif
+HTLC/image/png
+HTLC/image/png/icons-social.png
+HTLC/image/png/logo.png
+HTLC/image/png/none.png
+HTLC/image/png/sort_paginate.png
+HTLC/image/png/chipmunk1.png
+HTLC/image/png/down.png
+HTLC/image/png/icons-8.png
+HTLC/image/png/logo-print.png
+HTLC/image/png/up.png
+HTLC/image/png/logo-mobile.png
+HTLC/image/png/logo-tv.png
+HTLC/image/png/ungraded.png
+HTLC/text
+HTLC/text/javascript
+HTLC/text/javascript/chippy.js
+HTLC/text/javascript/jsapi
+HTLC/text/css
+HTLC/text/css/1.css
+```
