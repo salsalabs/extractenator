@@ -41,9 +41,8 @@ locked padlock that they want to see.Better Template Extractor for Salsalabs
 
 This software is placed into the public domain.  Use at your own risk.
 
-This software package is **not** a product of SalsaLabs, and SalsaLab does not
-support it. **Do not** contact Salsalabs Support about this package.  [Report
-problems by clicking here.](https://github.com/salsalabs/extractenator/issues
+**Do not** contact Salsalabs Support about this package.  [Report
+problems and make suggestions by clicking here.](https://github.com/salsalabs/extractenator/issues
 "Click here to report any problems with the Extractenator")
 
 # Summary
@@ -62,7 +61,7 @@ from Salsa
 * Stores the template on Salsa
 * Cleans up after itself
 
-##Still to do...
+## Still to do...
 
 This package will support a facility so that you can choose where Salsa content will go.
 Until that facility is working, the template saved to Salsa will need to be edited manually
@@ -89,7 +88,7 @@ cd extractenator
 npm update
 npm run prebuild
 ```
-Ignore any warnings.  If there are errors then [please report them.]
+Ignore any warnings.  If there are errors then [please report them here.]
 (https://github.com/salsalabs/extractenator/issues
 "Click here to report any problems with the Extractenator")
 * That's it!  Extractenator is ready to use!
@@ -114,14 +113,14 @@ Which should return something like this:
     --url <text>  URL to read
     --dir <text>  directory where the temlate and all resource files are stored.
 ```
-Missing arguments all get this treatment:
+All arguments are requiored.  Failure to provide one or more arguemnts gets
+this treatment:
 ```
 Error: All arguments are required!
   at Object.<anonymous> (/home/ubuntu/workspace/src/app.coffee:17:11)
   at Object.<anonymous> (/home/ubuntu/workspace/src/app.coffee:2:1)
   at Module._compile (module.js:456:26)
 ```
-
 Here's an example extraction:
 
 ```
@@ -173,3 +172,5 @@ HTLC/text/javascript/jsapi
 HTLC/text/css
 HTLC/text/css/1.css
 ```
+The file `template.html` will be the template to send to Salsa.  All of the resource
+URLs have been resolved to Salsa URLs and the template has been modified.
