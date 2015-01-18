@@ -5,6 +5,15 @@ Salsa template.  Salsa templates can be thought of as picture frames that surrou
 each Salsa page.  Templates provide the look-and-feel of your website so that 
 your Salsa pages look the same as your website.
 
+# Table of Contents
+
+## <a href="#background">Background</a>
+## <a href="#legalities">Legalities</a>
+## <a href="#summary">Summary</a>
+## <a href="#installation">Installation</a>
+## <a href="#make_it_go">Make it go!</a>
+
+<a name="background"></a>
 ## Background
 
 ### Templates must be "secure"
@@ -37,14 +46,51 @@ from your website after the template is extracted.  That resource will more than
 likely not be secure.  The browser will block it and your donor won't have the
 locked padlock that they want to see.Better Template Extractor for Salsalabs
 
+# Why "better template extractor?"
+
+At this writing, the Salsa template extractor is an ancient thing, and does not 
+always extract pages correctly.  This causes both Salsa and its clients tons of 
+aggravation, irritation and additional cost, and I, for one, got fed up with that.
+
+Extractenator duplcates the existing extractor's capabilities. The template and
+all of the files referenced by the template are downloaded to Salsa.  The template
+is modified to correctly reference the downloaded files.
+
+In addition, Extractenator successfully extracts sites that Salsa's extractor
+simply cannot handle.  Extractenator does the right thing with URLs requested from
+websites, thus avoiding the `403` errors that plagues clients using the Salsa
+extractor.
+
+Extractentator also searches
+all resource files that contain URLs and makes sure that all files are retrieved.
+This is definite upside for Salsa's clients.  Salsa's clients are outstanding at
+their jobs, but generally are not familiar with the internals of CSS.  Extractenator
+acknowledges that and does the right thing so that thehy don't have to be CSS gurus
+to use Salsa.
+
+The resulting templates created by this package are both clean and secure.  Resource
+files required by the templates are stored in the same way that Salsa stores the
+files retrieved during a "template download".
+
+My hope is that this free-and-open version of the extractor will reduce headaches
+and cost for all of us and leave us a bit more time for drinking really good coffee!
+
+<a name="legalities"></a>
 # Legalities (really short)
 
-This software is placed into the public domain.  Use at your own risk.
+Licensing terms and conditions may be found in the file `LICENSING` in the same
+directory as this file. **Do not** contact Salsalabs Support about this package.
+You will be sorely disappointed and they will be pissed off.
 
-**Do not** contact Salsalabs Support about this package.  [Report
-problems and make suggestions by clicking here.](https://github.com/salsalabs/extractenator/issues
-"Click here to report any problems with the Extractenator")
+<a name="got_a_problem"></a>
+# Got a problem?
+[Click here] (https://github.com/salsalabs/extractenator/issues "Click here
+to report any problems with the Extractenator") to report problems,
+make suggestions, offer funding or pass along a good joke.  Griping, whining
+and error reports that don't provide concrete examples may be deleted without
+being read.  Just sayin'...
 
+<a name="summary"></a>
 # Summary
 
 This package contains a program that
@@ -63,20 +109,22 @@ from Salsa
 
 ## Still to do...
 
-This package will support a facility so that you can choose where Salsa content will go.
-Until that facility is working, the template saved to Salsa will need to be edited manually
-so that the Salsa "template tags" are where you want Salsa content to appear.
+This package will support a facility so that you can choose where Salsa content
+will go. Until that facility is working, the template saved to Salsa will need
+to be edited manually so that the Salsa "template tags" are where you want
+Salsa content to appear.
 
-# Prerequisites
+<a name="installation"></a>
+# Installation
 
+## Prerequisites
 Before installation, you should have these software packages installed:
 
 1. [Node.js](http://nodejs.org/ "Node.js's Homepage")
 2. [CoffeeScript](http://coffeescript.org/ "Coffeescript's Homepage")
 3. [Git](http://git-scm.com/ "Homepage for the Git source control program")
 
-# Installation
-
+## Getting Extractentator
 * Clone the [Extractenator repository](https://github.com/salsalabs/extractenator)
 ```bash
 cd YOUR_WORKSPACE_DIRECTORY
@@ -93,6 +141,7 @@ Ignore any warnings.  If there are errors then [please report them here.]
 "Click here to report any problems with the Extractenator")
 * That's it!  Extractenator is ready to use!
 
+<a name="make_it_go"></a>
 # Make it go!
 
 The extraction part of Extractenator is started from the command line.  Use 
