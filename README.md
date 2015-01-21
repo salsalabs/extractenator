@@ -48,7 +48,7 @@ locked padlock that they want to see.Better Template Extractor for Salsalabs
 
 # Why "better template extractor?"
 
-At this writing, the Salsa template extractor is an ancient thing, and does not 
+At this writing, the Salsa template extractor is an ancient thing thing does not 
 always extract pages correctly.  This causes both Salsa and its clients tons of 
 aggravation, irritation and additional cost, and I, for one, got fed up with that.
 
@@ -56,23 +56,29 @@ Extractenator duplcates the existing extractor's capabilities. The template and
 all of the files referenced by the template are downloaded to Salsa.  The template
 is modified to correctly reference the downloaded files.
 
-In addition, Extractenator successfully extracts sites that Salsa's extractor
+In addition, Extractenator successfully extracts files that Salsa's extractor
 simply cannot handle.  Extractenator does the right thing with URLs requested from
 websites, thus avoiding the `403` errors that plagues clients using the Salsa
 extractor.
 
 Extractentator also searches
-all resource files that contain URLs and makes sure that all files are retrieved.
+all resource files for other resources and makes sure that those are retrieved as well.
+Gone are the days when a client or specialist had to edit a CSS file to make a font
+or background image appear.
+
 This is definite upside for Salsa's clients.  Salsa's clients are outstanding at
 their jobs, but generally are not familiar with the internals of CSS.  Extractenator
 acknowledges that and does the right thing so that thehy don't have to be CSS gurus
 to use Salsa.
 
-The resulting templates created by this package are both clean and secure.  Resource
+The resulting templates are both clean and secure.  Resource
 files required by the templates are stored in the same way that Salsa stores the
-files retrieved during a "template download".
+files retrieved during a "template download".  Neither the client nor experienced
+Salsa support specialists will be able to tell the difference between a template 
+extracted by the Salsa extractor and one extracted by Extractenator.  (Okay, except
+the one created by Extractenator works correctly the first time it's used.)
 
-My hope is that this free-and-open version of the extractor will reduce headaches
+My hope is that this free-and-open version template extractor will reduce headaches
 and cost for all of us and leave us a bit more time for drinking really good coffee!
 
 <a name="legalities"></a>
