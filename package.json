@@ -1,6 +1,6 @@
 {
   "name": "extractor",
-  "version": "1.11.4",
+  "version": "1.12.0",
   "description": "Template extractor for Salsalabs",
   "private": true,
   "author:": "aleonard@salalabs.com <Allen>",
