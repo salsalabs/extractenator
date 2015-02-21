@@ -44,7 +44,7 @@ class CSSParser extends Base
     #
     fixDeclaration: (decl, cb) =>
         @debug "CSSParser.fixDeclaration: decl is #{JSON.stringify decl}"
-        u = /url\((['"]*(.+)['"]*)\)/.exec(decl.value)[1]
+        u = /url\(['"]*(.+?)['"]*\)/.exec(decl.value)[1]
         @debug "CSSParser.fixDeclaration, u is #{u}"
 
         if @isCdn u
