@@ -44,24 +44,25 @@ class Base
     #
     get nextRegistryKey: -> "f#{@_serialNumber++}"
 
-    # Return the "marker" that mustache needs for a registry key.  The marker
-    # contains the directory name and the Mustache delimiters to interpret the
-    # value for the registry key as a literal.
+    # Display `message` onto the console if the global `debug` flag is set.
     #
-    # @example
-    # ```
-    # @opts.dir
-    # `DIRECTORY`
-    # @nextReistryKey 'f32'
-    # `/DIRECTORY/{{{f32}}}`
-    # ```
+    # @param  [String]  message  @debug message to display
     #
-    # @params [String] registryKey  registry key to wrap
-    # @return [String] Returns the wrapped registry key
-    #
-    wrapRegistryKey: (registryKey) ->
-        "/#{@opts.dir}/{{{#{registryKey}}}}"
+    debug: (message) ->
+        console.log message if @opts.debug?
 
+    # Examine a content type and return the directory where the content should
+    # be stored.
+    #
+    # @param   [String]  contentType  standard HTTP content type
+    # @return  [String]  directory name
+    #
+    getSubdir: (contentType) ->
+        parts = contentType.split '/'
+        return parts[1] if parts[1] in ['javascript', 'css']
+        return parts[0] if parts[0] in ['image', 'video']
+        return contentType
+        
     # Returns true if the provide `uri` is for a known CDN host. This includes any
     # `uri` that starts with '//' or whose hostname is in the known CDN host list.
     #
@@ -73,28 +74,6 @@ class Base
         r = url.parse u
         return r.hostname in config.CDN_HOSTS
 
-    # Method to modify a URI's contents before it is written to disk.  Override
-    # this method if a buffer needs to be changed for some reason before it's
-    # saved to disk.
-    #
-    # @param  [String]    contentType  HTTP content type, for example `text/css'
-    # @param  [Buffer]    body         the contents to modify
-    # @param  [Function]  cb           callback to handle (`err`, 'modifiedBody`)
-    #
-    # @note Default behavior is to call `cb null, body`
-    #
-    modifyContent: (contentType, body, cb) -> cb null, body
-
-    # Returns true if the contents of a URL with the provided `contentType` needs
-    # to be modified before being written to disk.
-    #
-    # @param  [String]    contentType  HTTP content type, for example `text/css'
-    # @return [Boolean]  returns true of the provided `contentType` needs to be modified
-    #
-    # @note Default behavior is to return `false`.
-    #
-    needsContentModification: (contentType) -> false
-
     # Write a URL to disk.  The file is stored in the provided directory using the
     # content type returned from the read.
     #
@@ -105,29 +84,35 @@ class Base
     # and manage cookies for all requests for files.
     #
     saveUrl: (uri, cb) ->
+        @debug "Base.saveUrl: saving #{uri}"
         return cb null, null unless uri?
         return cb null, null unless path.basename(uri)?.length > 0
-        unless RegExp('^http').test uri
-            r = url.parse @opts.url
-            r.pathname = uri
-            uri = url.format r
-        saveRequest = @localRequest.defaults encoding:null
-        saveRequest uri, encoding:null, (err, resp, body) =>
+        uri = url.resolve @opts.url, uri unless RegExp('^http').test uri
+        readRequest = @localRequest.defaults encoding:null
+        @debug "Base.saveUrl: #{uri} is resource URI"
+        readRequest uri, (err, resp, body) =>
+            @debug "Base.saveUrl: #{uri} read returned err #{err} and #{body.length} characters"
             return cb err, null if err?
+            @debug "Base.saveUrl: #{uri} returned status code #{resp.statusCode}"
             return cb resp.statusCode, @opts.url unless resp.statusCode == 200
             contentType = resp.headers['content-type'].split(';')[0]
+            @debug "Base.saveUrl: #{uri} has content type #{contentType}"
             return cb null, uri unless @validContentType contentType
-            filename = path.join contentType, path.basename(uri)
-            filename = filename.split('?')[0]
+            subdir = @getSubdir contentType
+            @debug "Base.saveUrl: #{uri} has subdir #{subdir}"
+            filename = path.join(subdir, path.basename(uri)).split('?')[0]
+            @debug "Base.saveUrl: #{uri} has filename #{filename}"
             if @needsContentModification contentType
+                @debug "Base.saveUrl: #{uri} calling modifyContent"
                 @modifyContent contentType, body, (err, b) =>
+                    @debug "Base.saveUrl: #{uri} modifyContent returned error #{err}"
                     return cb err, null if err?
-                    console.log "Base.saveUrl, saving #{filename}"
+                    @debug "Base.saveUrl, saving #{filename}"
+                    # console.log b if contentType.indexOf('css')
                     @writeFile filename, b
-                    cb null, filename
             else
                 @writeFile filename, body
-                cb null, filename
+            cb null, filename
 
     # Returns true if `contentType` is one of the content types that needs to
     # be saved.  This keeps us from saving HTML and other junk.
@@ -141,6 +126,16 @@ class Base
         return true if parts[0] in ['image', 'video']
         return false if parts[0] not in ['application', 'text']
         return parts[1] not in ['html']
+
+    # Return the "marker" that mustache needs for a registry key.  The marker
+    # the Mustache delimiters to interpret the value for the registry key as a
+    # literal.
+    #
+    # @params [String] registryKey  registry key to wrap
+    # @return [String] Returns the wrapped registry key
+    #
+    wrapRegistryKey: (registryKey) ->
+        "/{{{#{registryKey}}}}"
 
     # Write a file to the output directory.  This method accepts a filename,
     # recursively creates a subdirectories, then writes the file.

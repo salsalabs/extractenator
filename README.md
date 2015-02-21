@@ -44,7 +44,7 @@ declaration is used to specify the exact location of a particular resource.  If
 the `url` declaration is not changed, then the resource will still be retrieved
 from your website after the template is extracted.  That resource will more than
 likely not be secure.  The browser will block it and your donor won't have the
-locked padlock that they want to see.Better Template Extractor for Salsalabs
+locked padlock that they want to see.
 
 # Why "better template extractor?"
 
@@ -168,7 +168,7 @@ Which should return something like this:
     --url <text>  URL to read
     --dir <text>  directory where the temlate and all resource files are stored.
 ```
-All arguments are requiored.  Failure to provide one or more arguemnts gets
+All arguments are required.  Failure to provide one or more arguments gets
 this treatment:
 ```
 Error: All arguments are required!
