@@ -59,8 +59,10 @@ class Base
     #
     getSubdir: (contentType) ->
         parts = contentType.split '/'
-        return parts[1] if parts[1] in ['javascript', 'css']
+        parts[1] = 'javascript' if parts[1] in ['x-javascript']
         return parts[0] if parts[0] in ['image', 'video']
+        return parts[1] if parts[1] in ['javascript', 'css']
+        return 'image' if parts[1] in [ 'octet-stream' ]
         return contentType
         
     # Returns true if the provide `uri` is for a known CDN host. This includes any
@@ -129,13 +131,14 @@ class Base
 
     # Return the "marker" that mustache needs for a registry key.  The marker
     # the Mustache delimiters to interpret the value for the registry key as a
-    # literal.
+    # literal.  The registry key forces the directory to be the one provided
+    # in the `opts` parameter to the constructor.
     #
     # @params [String] registryKey  registry key to wrap
     # @return [String] Returns the wrapped registry key
     #
     wrapRegistryKey: (registryKey) ->
-        "/{{{#{registryKey}}}}"
+        "#{@opts.dir}/{{{#{registryKey}}}}"
 
     # Write a file to the output directory.  This method accepts a filename,
     # recursively creates a subdirectories, then writes the file.
