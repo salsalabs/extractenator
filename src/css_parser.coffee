@@ -53,6 +53,9 @@ class CSSParser extends Base
             @debug "CSSParser.fixDeclaration, decl AFTER is", decl
             return cb null
 
+        # Don't save resources.
+        return cb null if RegExp('^data:').test(u)
+        
         @debug "CSSParser.processElement: saving #{u}"
         @saveUrl u, (err, filename) =>
             @debug "CSSParser.fixDeclaration, err is #{err}, filename is #{filename}"
