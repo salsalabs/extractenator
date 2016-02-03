@@ -25,6 +25,7 @@ class HTMLParser extends Base
     finalize:  (window, cb) ->
         @writeFile 'registry.json', JSON.stringify(@registry, null, '    ')
         template = jsdom.serializeDocument window.document
+        console.log "Template is ", template
         @writeFile 'working_template.html', template
         @writeFile 'template.html', mustache.render(template, @registry)
         cb null
@@ -38,6 +39,7 @@ class HTMLParser extends Base
     # @param  [Function]  cb           callback to handle (`err`, 'modifiedBody`)
     #
     modifyContent: (contentType, body, cb) ->
+        @debug "HTMLParser.modifyContent contentType #{contentType} #{body.length}-char body, calling CSSParser? #{contentType.indexOf('css') != -1}"
         if contentType.indexOf('css') != -1
             new CSSParser(@opts, body).run cb
         else

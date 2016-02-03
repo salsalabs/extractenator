@@ -51,6 +51,16 @@ class Base
     debug: (message) ->
         console.log message if @opts.debug?
 
+    # Returns true if the contents of a URL with the provided `contentType` needs
+    # to be modified before being written to disk.
+    #
+    # @param  [String]   contentType  HTTP content type, for example `text/css'
+    # @return [Boolean]  returns true of the provided `contentType` needs to be modified
+    #
+    # @note Returns `false` by default;
+    #
+    needsContentModification: (contentType) -> false
+        
     # Examine a content type and return the directory where the content should
     # be stored.
     #
@@ -95,18 +105,19 @@ class Base
         readRequest uri, (err, resp, body) =>
             return cb err, null if err?
             @debug "Base.saveUrl: #{uri} returned status code #{resp.statusCode}"
-            @debug "Base.saveUrl: #{uri} returned status #(resp.statusCode}"
             return cb null, @opts.url unless resp.statusCode == 200
             contentType = resp.headers['content-type'].split(';')[0]
             @debug "Base.saveUrl: #{uri} has content type #{contentType}"
             return cb null, uri unless @validContentType contentType
             subdir = @getSubdir contentType
             @debug "Base.saveUrl: #{uri} has subdir #{subdir}"
-            filename = path.join(subdir, path.basename(uri)).split('?')[0]
+            filename = path.join(subdir, path.basename(uri)).split(/[\?\&]/)[0]
             @debug "Base.saveUrl: #{uri} has filename #{filename}"
+            @debug "base.saveUrl: #{uri} has contentType #{contentType} which will be modified? #{@needsContentModification contentType}"
             if @needsContentModification contentType
                 @debug "Base.saveUrl: #{uri} calling modifyContent"
                 @modifyContent contentType, body, (err, b) =>
+                    @debug "Base.saveUrl: #{uri} modifyContent returned err #{err} b #{b.lenth} character buffer"
                     @debug "Base.saveUrl: #{uri} modifyContent returned error #{err}"
                     return cb err, null if err?
                     @debug "Base.saveUrl, saving #{filename}"
@@ -149,8 +160,7 @@ class Base
     writeFile: (filename, content) ->
         filename = path.join(@opts.dir, filename)
         wrench.mkdirSyncRecursive path.dirname filename
-        fs.writeFile filename, content, (e) -> 
-            console.log("Error #{e} writing #{filename}") if e?
-
+        fs.writeFileSync filename, content
+        @debug "Base.writeFile wrote #{content.length} characters to #{filename}"
 module.exports =
     Base: Base
