@@ -25,7 +25,6 @@ class HTMLParser extends Base
     finalize:  (window, cb) ->
         @writeFile 'registry.json', JSON.stringify(@registry, null, '    ')
         template = jsdom.serializeDocument window.document
-        console.log "Template is ", template
         @writeFile 'working_template.html', template
         @writeFile 'template.html', mustache.render(template, @registry)
         cb null

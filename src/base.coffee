@@ -162,5 +162,6 @@ class Base
         wrench.mkdirSyncRecursive path.dirname filename
         fs.writeFileSync filename, content
         @debug "Base.writeFile wrote #{content.length} characters to #{filename}"
+
 module.exports =
     Base: Base
