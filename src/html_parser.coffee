@@ -7,19 +7,24 @@ url         = require 'url'
 {Base}      = require './base'
 {CSSParser} = require './css_parser'
 
-# Class to extract a Salsalabs COSM template from the URL provided in the
-# calling arguments.  A directory is used to cache the files needed by the
+# Class to extract a Salsalabs Salsa Classic template from the URL provided in
+# the calling arguments.  A directory is used to cache the files needed by the
 # extracted template.  When all files are retrieved and corrected then they
 # are moved into a directory on Salsa.  The template itself is inserted into
-# the COSM `template` database.
+# the Salsa Classic `template` database.
 #
+TEMPLATE_TAGS = """<!-- Template tags places by Extractenator 9000. -->
+<!-- TemplateBeginEditable name="content" -->
+<h1>Page content here.</h1>
+<!-- TemplateEndEditable -->
+"""
 class HTMLParser extends Base
     # Typically, the last step is to use Mustache to convert the modified
     # contents of the website to a template using the local files.  Doing that
-    # causes all of the file to be relative URLs, making it easy for COSM to use
-    # them after they are uploaded.
+    # causes all of the file to be relative URLs, making it easy for Salsa Classic
+    # to use them after they are uploaded.
     #
-    # @param  [String]    window    window object to save
+    # @param  [Object]    window    window object to save
     # @param  [Function]  cb        callback to handle (`err`)
     #
     finalize:  (window, cb) ->
@@ -27,6 +32,20 @@ class HTMLParser extends Base
         template = jsdom.serializeDocument window.document
         @writeFile 'working_template.html', template
         @writeFile 'template.html', mustache.render(template, @registry)
+        cb null
+
+    # Methond to clear out an element and replace the contents with Salsa's template tags.
+    # @param  [Object]    window    window object to save
+    # @param  [String]    selector  CSS/jQuery selector of the element to use
+    # @param  [Function]  cb        callback to handle (`err`)
+    insertTemplateTags: (window, selector, cb) ->
+        console.log "insertTemplateTags: selector is #{selector}"
+        return cb null unless selector?.length > 0
+        e = window.$(selector)
+        warning = "Selector '#{selector}' needs to match one element but matches #{e.length}."
+        return cb warning unless e.length == 1
+        e.empty().append(TEMPLATE_TAGS)
+        console.log "insertTemplateTags: inserted template tags."
         cb null
 
     # Method to modify a URI's contents before it is written to disk.  Overriden
@@ -151,6 +170,7 @@ class HTMLParser extends Base
             return cb "HTMLParser.run, failed to read #{@opts.url}, response is #{resp.statusCode}" unless resp.statusCode == 200
             jsdom.env body, config.JQUERY, cb
         tasks.push (w, cb) -> window = w; cb null
+        tasks.push (cb)    => @insertTemplateTags window, @opts.templateSelector, cb
         tasks.push (cb)    => @processElements window, 'link', 'href', cb
         tasks.push (cb)    => @processElements window, 'script', 'src', cb
         tasks.push (cb)    => @processElements window, 'img', 'src', cb

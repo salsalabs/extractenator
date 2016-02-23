@@ -14,7 +14,7 @@ opts
     .option('--url <text>', 'URL to read')
     .option('--dir <text>', DIR_DESC)
     .option('--debug', 'show debug output')
-    .option('--template-selector', 'CSS/jQuery selector of the element that holds the tepmplate tags')
+    .option('--template-selector <text>', 'CSS/jQuery selector of the element that holds the tepmplate tags')
     .parse(process.argv);
 throw new Error "--url and --dir are *both* required!" unless opts.url?.length > 0 and opts.dir?.length > 0
 new HTMLParser(opts).run (err, whatever) ->

@@ -117,7 +117,7 @@ class Base
             if @needsContentModification contentType
                 @debug "Base.saveUrl: #{uri} calling modifyContent"
                 @modifyContent contentType, body, (err, b) =>
-                    @debug "Base.saveUrl: #{uri} modifyContent returned err #{err} b #{b.lenth} character buffer"
+                    @debug "Base.saveUrl: #{uri} modifyContent returned err #{err} b #{b.length} character buffer"
                     @debug "Base.saveUrl: #{uri} modifyContent returned error #{err}"
                     return cb err, null if err?
                     @debug "Base.saveUrl, saving #{filename}"
@@ -155,13 +155,17 @@ class Base
     #
     # @param  [String]         filename  filename where `content` ends up
     # @param  [String, Buffer] content  content to write to `filename`
-    # @throws [Error]  Errors are thrown by underlying call, `fs.writeFileSync`
     #
     writeFile: (filename, content) ->
+        console.log "\nBase.writeFile: filename is #{filename} content length is #{content.length}"
+        return @debug "Base.writeFile: #{filename} is empty, skipping." unless content?.length > 0
         filename = path.join(@opts.dir, filename)
         wrench.mkdirSyncRecursive path.dirname filename
-        fs.writeFileSync filename, content
-        @debug "Base.writeFile wrote #{content.length} characters to #{filename}"
+        try
+            fs.writeFileSync filename, content
+            @debug "Base.writeFile wrote #{content.length} characters to #{filename}"
+        catch e
+            console.log "Base.writeFile #{err} on #{filename}" if err?
 
 module.exports =
     Base: Base
