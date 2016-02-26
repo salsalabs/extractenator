@@ -39,13 +39,13 @@ class HTMLParser extends Base
     # @param  [String]    selector  CSS/jQuery selector of the element to use
     # @param  [Function]  cb        callback to handle (`err`)
     insertTemplateTags: (window, selector, cb) ->
-        console.log "insertTemplateTags: selector is #{selector}"
+        @debug "insertTemplateTags: selector is #{selector}"
         return cb null unless selector?.length > 0
         e = window.$(selector)
         warning = "Selector '#{selector}' needs to match one element but matches #{e.length}."
         return cb warning unless e.length == 1
         e.empty().append(TEMPLATE_TAGS)
-        console.log "insertTemplateTags: inserted template tags."
+        @debug "insertTemplateTags: replaced contents of '#{selector}' with template tags."
         cb null
 
     # Method to modify a URI's contents before it is written to disk.  Overriden
@@ -72,6 +72,7 @@ class HTMLParser extends Base
     # @note This class overrides this method to return `true`.
     #
     needsContentModification: (contentType) -> 
+        @debug "HTMLParser.needsContentModification contentType #{contentType} returning #{contentType.indexOf('css') != -1}"
         contentType.indexOf('css') != -1
 
     # Resolve a single anchor `href`.  If the href is relative, then the href
@@ -109,7 +110,7 @@ class HTMLParser extends Base
     #
     processElement: (args, cb) =>
         # Note: `args` is a list of DOM elements and not a list of jQuery elements.
-        # If you modify this method, besure to use standard DOM calls.
+        # If you modify this method, be sure to use standard DOM calls.
         #
         u = args.element.getAttribute args.attribute
         @debug "HTMLParser.processElement: attribute #{args.attribute} is #{u}"
