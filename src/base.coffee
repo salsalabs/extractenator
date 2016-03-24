@@ -169,7 +169,7 @@ class Base
     # @return [String] Returns the wrapped registry key
     #
     wrapRegistryKey: (registryKey) ->
-        "#{@opts.dir}/{{{#{registryKey}}}}"
+        "{{{#{registryKey}}}}"
 
     # Write a file to the output directory.  This method accepts a filename,
     # recursively creates a subdirectories, then writes the file.  If the
