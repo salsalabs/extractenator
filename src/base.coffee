@@ -12,6 +12,9 @@ class Base
     get = (props) => @::__defineGetter__ name, getter for name, getter of props
     set = (props) => @::__defineSetter__ name, setter for name, setter of props
 
+    @registry = {}
+    @_serialNumber = 0
+
     # Constructor.  Instantiates this class.
     #
     # @param         [Object]    opts  runtime parameters
@@ -32,8 +35,6 @@ class Base
                 password: @opts.authPassword
                 sendImmediately: false
         @_localRequest = request.defaults options
-        @registry = {}
-        @_serialNumber = 0
 
     # @property [Object]  Returns the `request` object to use when reading from
     # the source website.  The request object has default behavior predefined
@@ -49,7 +50,7 @@ class Base
 
     # @property [String] returns the next registry key
     #
-    get nextRegistryKey: -> "f#{@_serialNumber++}"
+    get nextRegistryKey: -> "f#{Base._serialNumber++}"
 
     # Display `message` onto the console if the global `debug` flag is set.
     #
@@ -124,6 +125,7 @@ class Base
         return cb null, null unless uri.slice(-1) != '/'
         @debug "Base.saveUrl: saving #{uri}"
         uri = url.resolve @opts.url, uri unless RegExp('^http').test uri
+        @debug "Base.saveUrl: saving resolved #{uri}"
         readRequest = @localRequest.defaults encoding:null
         @debug "Base.saveUrl: #{uri} is resource URI"
         readRequest uri, (err, resp, body) =>
@@ -139,7 +141,7 @@ class Base
             @debug "Base.saveUrl: #{uri} has filename #{filename}"
             @debug "base.saveUrl: #{uri} has contentType #{contentType}. Will be modified? #{@needsContentModification contentType}"
             if @needsContentModification contentType
-                @modifyContent contentType, body, (err, b) =>
+                @modifyContent uri, contentType, body, (err, b) =>
                     @debug "Base.saveUrl: #{uri} modifyContent returned err #{err} and #{b.length} character buffer"
                     return cb err, null if err?
                     @debug "Base.saveUrl, saving #{filename}"
@@ -181,6 +183,7 @@ class Base
     # @return [String]         actual filename after de-duplication
     #
     writeFile: (filename, content) ->
+        console.log "Base.writeFile writing #{filename}"
         unless content?.length > 0
             @debug "Base.writeFile: #{filename} is empty, skipping." unless content?.length > 0
             return null
@@ -201,6 +204,7 @@ class Base
             @debug "Base.writeFile wrote #{content.length} characters to #{filename}"
         catch e
             console.log "Base.writeFile #{err} on #{filename}" if err?
+        @debug "Base.writeFile returning filename #{filename}"
         return filename
 
 module.exports =

@@ -22,12 +22,13 @@ class CSSParser extends Base
     # the saved filenames to key registry.
     #
     # @param         [Object]    opts  runtime parameters
-    # @option  opts  [String]    url  URL to read
-    # @option  opts  [String]    dir  directory to use for storing files
+    # @option  opts  [String]    url   URL to read
+    # @option  opts  [String]    dir   directory to use for storing files
     # @option        [Buffer]    body  text to parse and return
     #
     constructor: (opts, @body) ->
         super opts
+        console.log "CSSParser constructor, opts.url is #{opts.url}, opts.dir is #{opts.dir}"
 
     # Fix a declaration.  The provided declaration, `decl` must contain a `url()`
     # part.  The `url()` part is decided to retrieve the URL of a resource.  THe
@@ -43,30 +44,30 @@ class CSSParser extends Base
     # @param         [Function]  cb        callback to handle (`err`, 'decl')
     #
     fixDeclaration: (decl, cb) =>
-        @debug "CSSParser.fixDeclaration: decl is #{JSON.stringify decl}"
+        # console.log "CSSParser.fixDeclaration: decl is", decl
         u = /url\(['"]*(.+?)['"]*\)/.exec(decl.value)[1]
-        @debug "CSSParser.fixDeclaration, u is #{u}"
+        console.log "CSSParser.fixDeclaration: URL is #{u}"
 
         if @isCdn u
-            @debug "CSSParser.fixDeclaration, CDN  #{u}"
+            # @debug "CSSParser.fixDeclaration, CDN  #{u}"
             decl.value = u.replace RegExp('https*://'), '//'
             @debug "CSSParser.fixDeclaration, decl AFTER is", decl
             return cb null
 
         # Don't save resources with built-in data.
-        return cb null if RegExp('^data:').test(u)
-        
-        @debug "CSSParser.processElement: saving #{u}"
+        return cb null if /^data:/.test u
+
+        console.log "CSSParser.fixDeclaration: saving #{u}"
         @saveUrl u, (err, filename) =>
             @debug "CSSParser.fixDeclaration, err is #{err}, filename is #{filename}"
             @debug "CSSParser.fixDeclaration, Error reading #{u}", err if err?
             return cb null, decl unless filename?
-            @debug "CSSParser.fixDeclaration, filename #{filename}"
+            console.log "CSSParser.fixDeclaration, filename #{filename}"
             registryKey = @nextRegistryKey
             decl.value = "url(\"#{@wrapRegistryKey(registryKey)}\")"
             @debug "CSSParser.fixDeclaration, fixed decl is #{JSON.stringify decl}"
-            @registry[registryKey] = filename
-            @debug "CSSParser.processElement: registry[#{registryKey}] is #{@registry[registryKey]}"
+            Base.registry[registryKey] = filename
+            console.log "CSSParser.processElement: registry[#{registryKey}] is #{Base.registry[registryKey]}"
             cb null
 
     # Returns true if the contents of a URL with the provided `contentType` needs
@@ -97,13 +98,13 @@ class CSSParser extends Base
             for rule in obj.stylesheet.rules when rule.declarations?
                 try
                     d = rule.declarations.filter (x) -> RegExp('url\\(').test x.value
-                    decls = _.union decls, d
+                    decls = _.union decls, d if d.length > 0
                 catch err
                      @debug "Warning: #{err}"
             async.eachSeries decls, @fixDeclaration, cb
         tasks.push (cb) =>
             @body = css.stringify obj
-            template = mustache.render @body, @registry
+            template = mustache.render @body, Base.registry
             cb null, template
         async.waterfall tasks, cb
 

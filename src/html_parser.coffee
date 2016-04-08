@@ -28,10 +28,10 @@ class HTMLParser extends Base
     # @param  [Function]  cb        callback to handle (`err`)
     #
     finalize:  (window, cb) ->
-        @writeFile 'registry.json', JSON.stringify(@registry, null, '    ')
+        @writeFile 'registry.json', JSON.stringify(Base.registry, null, '    ')
         template = jsdom.serializeDocument window.document
         @writeFile 'working_template.html', template
-        @writeFile 'template.html', mustache.render(template, @registry)
+        @writeFile 'template.html', mustache.render(template, Base.registry)
         cb null
 
     # Methond to clear out an element and replace the contents with Salsa's template tags.
@@ -52,14 +52,17 @@ class HTMLParser extends Base
     # in this class to process the contents of a CSS file before it's written
     # to disk.
     #
+    # @param  [String]    uri          URI for `body`
     # @param  [String]    contentType  HTTP content type, for example `text/css'
     # @param  [Buffer]    body         the contents to modify
     # @param  [Function]  cb           callback to handle (`err`, 'modifiedBody`)
     #
-    modifyContent: (contentType, body, cb) ->
+    modifyContent: (uri, contentType, body, cb) ->
         @debug "HTMLParser.modifyContent contentType #{contentType} #{body.length}-char body, calling CSSParser? #{contentType.indexOf('css') != -1}"
         if contentType.indexOf('css') != -1
-            new CSSParser(@opts, body).run cb
+            opts = _.clone @opts
+            opts.url = uri
+            new CSSParser(opts, body).run cb
         else
             cb null, body
 
@@ -114,8 +117,8 @@ class HTMLParser extends Base
         #
         u = args.element.getAttribute args.attribute
         @debug "HTMLParser.processElement: attribute #{args.attribute} is #{u}"
-        @debug "HTMLParser.processElement: #{u} in registry? #{u in _.values @registry}"
-        return cb null unless u?.length > 0 and u not in _.values @registry
+        @debug "HTMLParser.processElement: #{u} in registry? #{u in _.values Base.registry}"
+        return cb null unless u?.length > 0 and u not in _.values Base.registry
         registryKey = @nextRegistryKey
         @debug "HTMLParser.processElement: registry key is #{registryKey}"
         if @isCdn u
@@ -129,8 +132,8 @@ class HTMLParser extends Base
             return cb null unless filename?
             @debug "HTMLParser.processElement, disk #{filename}"
             args.element.setAttribute args.attribute, @wrapRegistryKey(registryKey)
-            @registry[registryKey] = filename
-            @debug "HTMLParser.processElement: registry[#{registryKey}] is #{@registry[registryKey]}"
+            Base.registry[registryKey] = filename
+            @debug "HTMLParser.processElement: registry[#{registryKey}] is #{Base.registry[registryKey]}"
             cb null
 
     # Parse URLs for `tag` using `attribute`.  URLs are tested to see if they really
