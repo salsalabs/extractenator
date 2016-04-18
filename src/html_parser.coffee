@@ -13,7 +13,8 @@ url         = require 'url'
 # are moved into a directory on Salsa.  The template itself is inserted into
 # the Salsa Classic `template` database.
 #
-TEMPLATE_TAGS = """<!-- Template tags places by Extractenator 9000. -->
+TEMPLATE_TAGS = """
+<!-- Template tags placed by Extractenator 9000. -->
 <!-- TemplateBeginEditable name="content" -->
 <h1>Page content here.</h1>
 <!-- TemplateEndEditable -->

@@ -70,6 +70,16 @@ class CSSParser extends Base
             console.log "CSSParser.processElement: registry[#{registryKey}] is #{Base.registry[registryKey]}"
             cb null
 
+    # Method to modify a URI's contents before it is written to disk.  Overriden
+    # in this class to do nothing.
+    #
+    # @param  [String]    uri          URI for `body`
+    # @param  [String]    contentType  HTTP content type, for example `text/css'
+    # @param  [Buffer]    body         the contents to modify
+    # @param  [Function]  cb           callback to handle (`err`, 'modifiedBody`)
+    #
+    modifyContent: (uri, contentType, body, cb) -> cb null, body
+
     # Returns true if the contents of a URL with the provided `contentType` needs
     # to be modified before being written to disk.
     #

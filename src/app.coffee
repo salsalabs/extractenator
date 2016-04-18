@@ -3,7 +3,7 @@ opts         = require 'commander'
 {HTMLParser} = require './html_parser'
 
 DESCRIPTION = '''Read a URL and extract a Salsa template from it.'''
-DIR_DESC = '''directory where the temlate and all resource files are stored.'''
+DIR_DESC = '''directory where the template and all resource files are stored.'''
 
 # Program to gather runtime parameters for extracting a template.  After parameters
 # are validated the HtmlParser runs to extract a Salsa Classic template from the specified
@@ -14,7 +14,7 @@ opts
     .option('--url <text>', 'URL to read')
     .option('--dir <text>', DIR_DESC)
     .option('--debug', 'show debug output')
-    .option('--template-selector <text>', 'CSS/jQuery selector of the element that holds the tepmplate tags')
+    .option('--template-selector <text>', 'CSS/jQuery selector of the element that holds the template tags')
     .option('--auth-username <text>', 'username for reading from site')
     .option('--auth-password <text>', 'password for readin from site')
     .parse(process.argv);

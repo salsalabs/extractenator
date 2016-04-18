@@ -132,8 +132,12 @@ class Base
             return cb err, null if err?
             @debug "Base.saveUrl: #{uri} has status code #{resp.statusCode}"
             return cb null, @opts.url unless resp.statusCode == 200
-            contentType = resp.headers['content-type'].split(';')[0]
+            contentType = resp.headers['content-type']
+            unless contentType?
+                console.log "Base.saveURL: Unknown content type for #{uri}, setting to 'text/html'"
+                contentType = "text/html"
             @debug "Base.saveUrl: #{uri} has content type #{contentType}"
+            contentType = contentType.split(';')[0]
             return cb null, uri unless @validContentType contentType
             subdir = @getSubdir contentType
             @debug "Base.saveUrl: #{uri} has subdir #{subdir}"
