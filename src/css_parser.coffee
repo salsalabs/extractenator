@@ -110,11 +110,17 @@ class CSSParser extends Base
                     d = rule.declarations.filter (x) -> RegExp('url\\(').test x.value
                     decls = _.union decls, d if d.length > 0
                 catch err
-                     @debug "Warning: #{err}"
+                     
             async.eachSeries decls, @fixDeclaration, cb
         tasks.push (cb) =>
-            @body = css.stringify obj
-            template = mustache.render @body, Base.registry
+            try
+                body = "#{css.stringify obj}"
+                console.log "body 1", body
+            catch err
+                @debug "Warning: #{err}"
+                body = @body
+            console.log "body 2", body
+            template = mustache.render body, Base.registry
             cb null, template
         async.waterfall tasks, cb
 
