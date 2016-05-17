@@ -19,13 +19,13 @@
     "async": "*",
     "commander": "*",
     "css": "*",
+    "fs-extra": "*",
     "jsdom": "*",
     "moment-timezone": "*",
     "mustache": "*",
     "request": "*",
     "tough-cookie": "*",
-    "underscore": "*",
-    "wrench": "*"
+    "underscore": "*"
   },
   "devDependencies": {
     "codo": "*",
