@@ -145,6 +145,7 @@ class Base
             @debug "Base.saveUrl: #{uri} has filename #{filename}"
             @debug "base.saveUrl: #{uri} has contentType #{contentType}. Will be modified? #{@needsContentModification contentType}"
             if @needsContentModification contentType
+                body = body.toString 'utf-8'
                 @modifyContent uri, contentType, body, (err, b) =>
                     @debug "Base.saveUrl: #{uri} modifyContent returned err #{err} and #{b.length} character buffer"
                     return cb err, null if err?
@@ -202,7 +203,7 @@ class Base
                 @debug "base.writeFile: Base.writeFile trying #{filename}"
             catch err
                 working = false
-        wrench.mkdirsSync path.dirname filename
+        fs.mkdirsSync path.dirname filename
         try
             fs.writeFileSync filename, content
             @debug "Base.writeFile wrote #{content.length} characters to #{filename}"
