@@ -1,5 +1,5 @@
 config   = require './config'
-fs       = require 'fs'
+fs       = require 'fs-extra'
 path     = require 'path'
 request  = require 'request'
 url      = require 'url'
@@ -141,7 +141,7 @@ class Base
             return cb null, uri unless @validContentType contentType
             subdir = @getSubdir contentType
             @debug "Base.saveUrl: #{uri} has subdir #{subdir}"
-            filename = path.join(subdir, path.basename(uri)).split(/[\!\?]/)[0]
+            filename = path.join(@opts.dir, subdir, path.basename(uri)).split(/[\!\?]/)[0]
             @debug "Base.saveUrl: #{uri} has filename #{filename}"
             @debug "base.saveUrl: #{uri} has contentType #{contentType}. Will be modified? #{@needsContentModification contentType}"
             if @needsContentModification contentType
@@ -191,7 +191,7 @@ class Base
         unless content?.length > 0
             @debug "Base.writeFile: #{filename} is empty, skipping." unless content?.length > 0
             return null
-        filename = path.join(@opts.dir, filename)
+        filename = path.join(@opts.dir, filename) if filename.indexOf(@opts.dir) == -1
         working = true
         count = 1
         while working
@@ -202,7 +202,7 @@ class Base
                 @debug "base.writeFile: Base.writeFile trying #{filename}"
             catch err
                 working = false
-        wrench.mkdirSyncRecursive path.dirname filename
+        wrench.mkdirsSync path.dirname filename
         try
             fs.writeFileSync filename, content
             @debug "Base.writeFile wrote #{content.length} characters to #{filename}"

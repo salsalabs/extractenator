@@ -18,7 +18,8 @@ opts
     .option('--auth-username <text>', 'username for reading from site')
     .option('--auth-password <text>', 'password for readin from site')
     .parse(process.argv);
+console.log opts
 throw new Error "--url and --dir are *both* required!" unless opts.url?.length > 0 and opts.dir?.length > 0
 new HTMLParser(opts).run (err, whatever) ->
-    throw err if err?
+    throw JSON.stringify err if err?
     process.exit 0
