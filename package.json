@@ -20,7 +20,7 @@
     "commander": "*",
     "css": "*",
     "fs-extra": "*",
-    "jsdom": "*",
+    "jsdom": "3.1.2",
     "moment-timezone": "*",
     "mustache": "*",
     "request": "*",
