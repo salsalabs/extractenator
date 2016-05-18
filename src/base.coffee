@@ -3,7 +3,6 @@ fs       = require 'fs-extra'
 path     = require 'path'
 request  = require 'request'
 url      = require 'url'
-wrench   = require 'wrench'
 
 # Base class to provide common read, right and registration for the classes in
 # this project.
