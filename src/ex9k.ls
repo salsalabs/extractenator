@@ -20,8 +20,9 @@ class Task
         @httpsCode = null
         
         u = url.parse @referer
+        return unless @original?
+        return if @original instanceof Object
         @resolved = "#{u.protocol}#{@original}" if RegExp '^//' .test @original 
-        return unless @resolved?
         o = url.parse @original
         @resolved = url.resolve u, @original unless o.protocol?
 
@@ -29,13 +30,13 @@ class Task
         "#{@serialNumber} #{@referer} #{@tag} #{@attr} #{@resolved}"
 
 class CSSTask extends Task
-    saveFilename: (fn) ->
-        @elem.val(fn)
+    save-filename: ->
+        @elem.val @resolved
 
 class FileTask extends Task
-    saveFilename: (fn) ->
-        @elem.attr @attr, fn
-
+    save-filename: ->
+        @elem.attr @attr, @resolved
+        console.log "#{@serialNumber} #{@referer} #{@tag} #{@original} finalized as #{@elem.attr @attr}"
 class ParseHTML
     (u) ->
         @u = u
@@ -67,10 +68,11 @@ class ParseHTML
             | 'css-embedded' => 'parse-css-buffer: updating element with CSS'
         cb null
 
-    parse-css-file: (t, cb) ->
+    parse-css-file: (t, cb) ~>
         console.log "parse-css-file: #{t.to-string!} parsing CSS file #{t.resolved}"
         console.log "parse-css-file: reading #{t.resolved}"
         @rawRequest t.resolved, (err, resp, body) ->
+            console.log "parse-css-file: read #{t.resolved}, err is #err"
             return cb err if err?
             t.httpsCode = response.statusCode
             t.contentType = response.headers['content-type']
@@ -89,6 +91,7 @@ class ParseHTML
         action = switch t.tag
             | 'css' => @parse-css-file t, cb
             | 'css-embedded' => @parse-embedded-css t, cb
+            | 'anchor' => t.save-filename!; cb null
             | otherwise => @save-to-disk t, cb
         console.log "process-task: #{t.to-string!} action: #action" 
         cb null
@@ -105,10 +108,11 @@ class ParseHTML
                 @save-html-to-disk @u, $, cb
 
             u = @u
-            $ 'link[href*=css]' .each -> queue.push new Task u, $(this), 'css', 'href', ->
-            $ 'script[src*=js]' .each -> queue.push new Task u, $(this), 'script', 'src', ->
-            $ 'style[type*=css]' .each -> queue.push new Task u, $(this), 'css-embedded', '' ->
-            $ 'img:not([src^=data])' .each -> queue.push new Task u, $(this), 'img', 'src', ->
+            $ 'link[href*=css]' .each -> queue.push new FileTask u, $(this), 'css', 'href', ->
+            $ 'script[src*=js]' .each -> queue.push new FileTask u, $(this), 'script', 'src', ->
+            $ 'style[type*=css]' .each -> queue.push new FileTask u, $(this), 'css-embedded', '' ->
+            $ 'img:not([src^=data])' .each -> queue.push new FileTask u, $(this), 'img', 'src', ->
+            $ 'a' .each -> queue.push new FileTask u, $(this), 'anchor', 'href', ->
 
             # Not ready to remove these yet.  All ignored by omission in process-task
             # $ 'link:not([href*=css])' .each -> queue.push new Task u, $(this), 'link', 'href', ->
@@ -121,7 +125,7 @@ class ParseHTML
         cb null
 
     save-to-disk: (t, cb) ->
-        console.log "save-to-disk: saving #{t.to-string!} to disk"
+        console.log "save-to-disk: saving #{t.contentType} #{t.to-string!} to disk"
         cb null
 
 new ParseHTML 'https://www.4chan.org/s' .run (err) ->
