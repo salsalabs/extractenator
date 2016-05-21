@@ -28,44 +28,63 @@ class Task
 class ParseHTML
     (u) ->
         @u = u
-        @textRequest = request.defaults do
+        # Always read buffers.  Convert buffers to string as needed for parsing.
+        @rawRequest = request.defaults do
             jar: true
-            encoding: 'utf8'
+            encoding: null
             headers:
                 'Referer': @u
                 'User-Agent': config.USER_AGENT
-        @rawRequest = @textRequest.defaults encoding:null
 
-    process-task: (t, cb) ->
+    parse-css-buffer: (t, b, cb) ->
+        console.log "parse-css-buffer: #{t.to-string!} parsing #{b.length} bytes of CSS"
+        console.log switch t.tag
+            | 'css' => "parse-css-buffer: writing file and updating CSS #{t.attr} attribute"
+            | 'css-embedded' => 'parse-css-buffer: updating element with CSS'
+        cb null
+
+    parse-css-file: (t, cb) ->
+        console.log "parse-css: #{t.to-string!} parsing CSS file #{t.resolved}"
+        @parse-css-buffer t, new Buffer(''), cb
+        cb null
+    
+    parse-embedded-css: (t, cb) ->
+        content = t.elem.html()
+        console.log "parse-embedded-css: #{t.to-string!} parsing #{content.length} bytes of embedded CSS"
+        @parse-css-buffer t, content, cb
+
+    process-task: (t, cb) ~>
         action = switch t.tag
-            | 'css' => 'parse-css file'
-            | 'link' => 'ignored'
-            | 'script-embedded' => 'embedded script'
-            | 'css-embedded' => "parse embedded css"
-            | 'data-img' => 'data-img ignored'
-            | otherwise => 'save to disk'
-        console.log "#{t.to-string!} action: #action" 
+            | 'css' => @parse-css-file t, cb
+            | 'css-embedded' => @parse-embedded-css t, cb
+            | otherwise => @save-to-disk t, cb
+        console.log "process-task: #{t.to-string!} action: #action" 
         cb null
 
     run: (cb) ->
-        console.log "reading #{@u}"
-        @textRequest @u, (err, resp, body) ~>
-            console.log "read #{@u}"
+        console.log "run: reading #{@u}"
+        @rawRequest @u, (err, resp, body) ~>
             return cb err if err?
-            $ = cheerio.load body
+            $ = cheerio.load body.toString 'utf-8'
 
             queue = async.queue @process-task, 20
             queue.drain = ->
-                console.log 'all done'
+                console.log 'run: all done'
                 cb null
             u = @u
             $ 'link[href*=css]' .each -> queue.push new Task u, $(this), 'css', 'href', ->
-            $ 'link:not([href*=css])' .each -> queue.push new Task u, $(this), 'link', 'href', ->
             $ 'script[src*=js]' .each -> queue.push new Task u, $(this), 'script', 'src', ->
-            $ 'script:not([src])' .each -> queue.push new Task u, $(this), 'script-embedded', '', ->
             $ 'style[type*=css]' .each -> queue.push new Task u, $(this), 'css-embedded', '' ->
             $ 'img:not([src^=data])' .each -> queue.push new Task u, $(this), 'img', 'src', ->
-            $ 'img[src^=data]' .each -> queue.push new Task u, $(this), 'data-img', 'src', ->
+
+            # Not ready to remove these yet.  All ignored by omission in process-task
+            # $ 'link:not([href*=css])' .each -> queue.push new Task u, $(this), 'link', 'href', ->
+            # $ 'script:not([src])' .each -> queue.push new Task u, $(this), 'script-embedded', '', ->
+            # $ 'img[src^=data]' .each -> queue.push new Task u, $(this), 'data-img', 'src', ->
+
+    save-to-disk: (t, cb) ->
+        console.log "save-to-disk: #{t.to-string!} saved to disk"
+        cb null
 
 new ParseHTML 'https://www.4chan.org/s' .run (err) ->
     console.log err if err?
