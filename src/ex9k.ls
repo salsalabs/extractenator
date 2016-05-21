@@ -2,6 +2,7 @@ require! async
 require! cheerio
 require! css
 fs = require 'fs-extra'
+require! path
 require! request
 require! url
 require! './config'
@@ -13,15 +14,16 @@ class Task
         @elem = elem
         @tag = tag
         @attr = attr
-        @original = @elem.attr @attr
         @resolved = null
         @serialNumber = @@serialNumber++
         @contentType = null
         @httpsCode = null
-        
-        u = url.parse @referer
+        @filename = null
+
+        @get-original!        
         return unless @original?
         return if @original instanceof Object
+        u = url.parse @referer
         @resolved = "#{u.protocol}#{@original}" if RegExp '^//' .test @original 
         o = url.parse @original
         @resolved = url.resolve u, @original unless o.protocol?
@@ -29,17 +31,33 @@ class Task
     to-string: ->
         "#{@serialNumber} #{@referer} #{@tag} #{@attr} #{@resolved}"
 
+    get-directory: (t) ->
+        | /image\//.test t.contentType => \image
+        | /css/.test t.contentType => \css
+        | /javascript/.test t.contentType => \javascript
+        | /font/.test t.contentType => \font
+        | otherwise ''
+
+    get-filename: (dir) ->
+        @filename = path.join dir, path.basename @resolved .split '?' .first
+        console.log '#{@to-string!} is filename #{@filename}'
+
 class CSSTask extends Task
+    get-original: -> @original = @elem.value
     save-filename: ->
-        @elem.val @resolved
+        @elem.value @filename
+        console.log "#{@serialNumber} #{@referer} #{@tag} #{@original} finalized as #{@elem.value}"
 
 class FileTask extends Task
+    get-original: -> @original = @elem.attr @attr
     save-filename: ->
-        @elem.attr @attr, @resolved
+        @elem.attr @attr, @filename
         console.log "#{@serialNumber} #{@referer} #{@tag} #{@original} finalized as #{@elem.attr @attr}"
+
 class ParseHTML
-    (u) ->
+    (u, opts) ->
         @u = u
+        @opts = opts
         # Always read URLs as buffers buffers.  Convert buffers to string as needed for parsing.
         @rawRequest = request.defaults do
             jar: true
@@ -47,6 +65,9 @@ class ParseHTML
             headers:
                 'Referer': @u
                 'User-Agent': config.USER_AGENT
+        
+    is-cdn: (t) ->
+        url.parse t.original .hostname in config.CDN_HOSTS
 
     # @return [String|Buffer] Returns cleaned contents of the buffer?
     parse-css-buffer: (t, b, cb) ->
@@ -88,12 +109,11 @@ class ParseHTML
         @parse-css-buffer t, t.elem.html(), cb
 
     process-task: (t, cb) ~>
-        action = switch t.tag
+        switch t.tag
             | 'css' => @parse-css-file t, cb
             | 'css-embedded' => @parse-embedded-css t, cb
             | 'anchor' => t.save-filename!; cb null
             | otherwise => @save-to-disk t, cb
-        console.log "process-task: #{t.to-string!} action: #action" 
         cb null
 
     run: (cb) ->
@@ -114,20 +134,30 @@ class ParseHTML
             $ 'img:not([src^=data])' .each -> queue.push new FileTask u, $(this), 'img', 'src', ->
             $ 'a' .each -> queue.push new FileTask u, $(this), 'anchor', 'href', ->
 
-            # Not ready to remove these yet.  All ignored by omission in process-task
-            # $ 'link:not([href*=css])' .each -> queue.push new Task u, $(this), 'link', 'href', ->
-            # $ 'script:not([src])' .each -> queue.push new Task u, $(this), 'script-embedded', '', ->
-            # $ 'img[src^=data]' .each -> queue.push new Task u, $(this), 'data-img', 'src', ->
-
     save-html-to-disk: (u, $, cb) ->
         # http://stackoverflow.com/questions/982717/how-do-i-get-the-entire-pages-html-with-jquery
         console.log "save-html-to-disk: saving #u to disk"
         cb null
 
     save-to-disk: (t, cb) ->
+        console.log "save-to-disk: #{t.contentType} #{t.to-string!} is on a CDN" if @is-cdn t
         console.log "save-to-disk: saving #{t.contentType} #{t.to-string!} to disk"
-        cb null
+        return cb null if @is-cdn t 
+        return cb null unless /^http/.test t.resolved
+        return cb null unless t.resolved.slice(-1) != '/'
+        @rawRequest t.resolved, (err, resp, body) ~>
+            return cb err if err?
+            t.get-filename @opts.dir
+            fs.stat path.basename t.filename, (err, stats) ->
+                fs.mkdirs path.basename t.filename, (err) ->
+                    return cb err if err?
+                    fs.writeFile t.filename, body, encoding: null, (err) ->
+                        return cb err
+                        console.log "save-to-disk: saving #{t.contentType} #{t.to-string!} to #{t.filename}"
+                        cb null
 
-new ParseHTML 'https://www.4chan.org/s' .run (err) ->
+stanthonysf = 'https://www.stanthonysf.org/myaccount/'
+fourc = 'https://www.4chan.org/s'
+new ParseHTML fourc, dir: 'o' .run (err) ->
     console.log err if err?
     process.exit 0
