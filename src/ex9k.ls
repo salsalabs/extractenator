@@ -17,7 +17,7 @@ class Task
         @resolved = null
         @serialNumber = @@serialNumber++
         @contentType = null
-        @httpsCode = null
+        @statusCode = null
         @filename = null
 
         @get-original!        
@@ -44,15 +44,11 @@ class Task
 
 class CSSTask extends Task
     get-original: -> @original = @elem.value
-    save-filename: ->
-        @elem.value @filename
-        console.log "#{@serialNumber} #{@referer} #{@tag} #{@original} finalized as #{@elem.value}"
+    save-filename: -> @elem.value (@filename or @resolved)
 
 class FileTask extends Task
     get-original: -> @original = @elem.attr @attr
-    save-filename: ->
-        @elem.attr @attr, @filename
-        console.log "#{@serialNumber} #{@referer} #{@tag} #{@original} finalized as #{@elem.attr @attr}"
+    save-filename: -> @elem.attr @attr, (@filename or @resolved)
 
 class ParseHTML
     (u, opts) ->
@@ -90,20 +86,10 @@ class ParseHTML
         cb null
 
     parse-css-file: (t, cb) ~>
-        console.log "parse-css-file: #{t.to-string!} parsing CSS file #{t.resolved}"
-        console.log "parse-css-file: reading #{t.resolved}"
-        @rawRequest t.resolved, (err, resp, body) ->
-            console.log "parse-css-file: read #{t.resolved}, err is #err"
+        @read-resolved t, (err, body) ->
             return cb err if err?
-            t.httpsCode = response.statusCode
-            t.contentType = response.headers['content-type']
-            console.log "parse-css-file: read #{body.length} bytes from #{t.resolved} as #{t.contentType} with code #{t.httpsCode}"
-            if t.httpsCode != 200
-                console.log 'parse-css-file: #{t.httpsCode} on read from #{t.resolved}'
-                return cb null
-            @parse-css-buffer t, new Buffer(''), cb
-        cb null
-    
+            @parse-css-buffer t, body, cb
+
     parse-embedded-css: (t, cb) ->
         console.log "parse-embedded-css: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS"
         @parse-css-buffer t, t.elem.html(), cb
@@ -115,6 +101,19 @@ class ParseHTML
             | 'anchor' => t.save-filename!; cb null
             | otherwise => @save-to-disk t, cb
         cb null
+
+    read-resolved: (t, cb) ~>
+        console.log "read-resolved: reading #{t.resolved}"
+        @rawRequest t.resolved, (err, resp, body) ->
+            return cb err if err?
+            t.statusCode = resp.statusCode
+            t.contentType = resp.headers['content-type']
+            console.log "read-resolved: read #{body.length} bytes from #{t.resolved} as #{t.contentType} with code #{t.statusCode}"
+            if t.statusCode != 200
+                # Ignore HTTP errors
+                console.log 'read-resolved: #{t.statusCode} on read from #{t.resolved}'
+                return cb null
+            cb null, body
 
     run: (cb) ->
         console.log "run: reading #{@u}"
@@ -140,12 +139,12 @@ class ParseHTML
         cb null
 
     save-to-disk: (t, cb) ->
-        console.log "save-to-disk: #{t.contentType} #{t.to-string!} is on a CDN" if @is-cdn t
-        console.log "save-to-disk: saving #{t.contentType} #{t.to-string!} to disk"
+        console.log "save-to-disk: #{t.to-string!} is on a CDN" if @is-cdn t
+        console.log "save-to-disk: saving #{t.to-string!} to disk"
         return cb null if @is-cdn t 
         return cb null unless /^http/.test t.resolved
         return cb null unless t.resolved.slice(-1) != '/'
-        @rawRequest t.resolved, (err, resp, body) ~>
+        @read-resolved t, (err, body) ~>
             return cb err if err?
             t.get-filename @opts.dir
             fs.stat path.basename t.filename, (err, stats) ->
