@@ -51,9 +51,9 @@ class CssTask extends Task
 class FileTask extends Task
     get-original: -> @original = @elem.attr @attr
     save-filename: ->
-        console.log "FileTask.save-filename: #{@tag} #{@resolved} is filename #{@filename}"
+        console.log "FileTask.save-filename: #{@tag} #{@resolved} is filename #{@filename}" unless @tag == \anchor
         @elem.attr @attr, (@filename or @resolved)
-        console.log "FileTask.save-filename: #{@tag} #{@resolved} is filename #{@filename}, contents of #{@attr} is #{@elem.attr @attr}"
+        console.log "FileTask.save-filename: #{@tag} #{@resolved} is filename #{@filename}, contents of #{@attr} is #{@elem.attr @attr}" unless @tag == \anchor
 
 class HtmlTask extends Task
     get-original: ->
