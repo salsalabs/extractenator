@@ -60,6 +60,7 @@ class HtmlTask extends Task
         @original = @referer
         @resolved = @original
         @resolved = path.join @original, '/', "index.html" unless path.extname @original?
+        @contentType = 'text/html'
     save-filename: ->
 
 class Extractenator9000
@@ -150,15 +151,17 @@ class Extractenator9000
     save-buffer-to-disk: (t, body, cb) ->
         t.get-filename @opts.dir
         target-dir = path.dirname t.filename
+        console.log "save-buffer-to-disk: target dir is #{target-dir}"
         tasks = 
-            * (cb) ~> fs.stat target-dir, (err, stats) -> cb null
-            * (cb) ~> fs.mkdirs target-dir, cb
-            * (cb) ~> fs.mkdirs target-dir, cb
-            * (cb) ~> fs.writeFile t.filename, body, encoding: null, cb
-            * (cb) ~> t.save-filename!; cb null
-            async.waterfall tasks, (err) ~>
-                console.log "save-to-disk: saved #{t.contentType} #{t.to-string!} to #{t.filename}"
-                cb null
+            * (cb) ~> console.log "save-buffer-to-disk: stat"; fs.stat target-dir, (err, stats) -> cb null, stats
+            * (stats, cb) ~> console.log "save-buffer-to-disk: mkdirs"; return cb null if stats?; fs.mkdirs target-dir, cb
+            * (cb) ~> console.log "save-buffer-to-disk: writeFile"; fs.writeFile t.filename, body, encoding: null, (err) -> console.log "save-buffer-to-disk: writeFile, err", err; cb err
+            * (cb) ~> console.log "save-buffer-to-disk: t.save-filename"; t.save-filename!; cb null
+            * (cb) ~> console.log "save-to-disk: #{t.to-string!} saved to #{t.filename} as #{t.contentType}"; cb null
+        console.log "save-buffer-to-disk: calling waterfall"
+        async.waterfall tasks, (err) ->
+            console.log "save-buffer-to-disk: err", err
+            cb null
         
     save-to-disk: (t, cb) ->
         console.log "save-to-disk: #{t.to-string!} is on a CDN" if @is-cdn t
