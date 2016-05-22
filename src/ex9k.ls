@@ -153,8 +153,8 @@ class Extractenator9000
         target-dir = path.dirname t.filename
         console.log "save-buffer-to-disk: target dir is #{target-dir}"
         tasks = 
-            * (cb) ~> console.log "save-buffer-to-disk: stat"; fs.stat target-dir, (err, stats) -> cb null, stats
-            * (stats, cb) ~> console.log "save-buffer-to-disk: mkdirs"; return cb null if stats?; fs.mkdirs target-dir, cb
+            * (cb) ~> fs.stat target-dir, (err, stats) -> cb null, stats
+            * (stats, cb) ~> return cb null if stats?; fs.mkdirs target-dir, cb
             * (cb) ~> console.log "save-buffer-to-disk: writeFile"; fs.writeFile t.filename, body, encoding: null, (err) -> console.log "save-buffer-to-disk: writeFile, err", err; cb err
             * (cb) ~> console.log "save-buffer-to-disk: t.save-filename"; t.save-filename!; cb null
             * (cb) ~> console.log "save-to-disk: #{t.to-string!} saved to #{t.filename} as #{t.contentType}"; cb null
