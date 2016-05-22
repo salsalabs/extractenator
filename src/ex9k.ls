@@ -50,10 +50,7 @@ class CssTask extends Task
 
 class FileTask extends Task
     get-original: -> @original = @elem.attr @attr
-    save-filename: ->
-        console.log "FileTask.save-filename: #{@tag} #{@resolved} is filename #{@filename}" unless @tag == \anchor
-        @elem.attr @attr, (@filename or @resolved)
-        console.log "FileTask.save-filename: #{@tag} #{@resolved} is filename #{@filename}, contents of #{@attr} is #{@elem.attr @attr}" unless @tag == \anchor
+    save-filename: -> @elem.attr @attr, (@filename or @resolved)
 
 class HtmlTask extends Task
     get-original: ->
@@ -151,24 +148,21 @@ class Extractenator9000
     save-buffer-to-disk: (t, body, cb) ->
         t.get-filename @opts.dir
         target-dir = path.dirname t.filename
-        console.log "save-buffer-to-disk: target dir is #{target-dir}"
         tasks = 
             * (cb) ~> fs.stat target-dir, (err, stats) -> cb null, stats
             * (stats, cb) ~> return cb null if stats?; fs.mkdirs target-dir, cb
-            * (cb) ~> console.log "save-buffer-to-disk: writeFile"; fs.writeFile t.filename, body, encoding: null, (err) -> console.log "save-buffer-to-disk: writeFile, err", err; cb err
-            * (cb) ~> console.log "save-buffer-to-disk: t.save-filename"; t.save-filename!; cb null
-            * (cb) ~> console.log "save-to-disk: #{t.to-string!} saved to #{t.filename} as #{t.contentType}"; cb null
-        console.log "save-buffer-to-disk: calling waterfall"
+            * (cb) ~> fs.writeFile t.filename, body, encoding: null, cb
+            * (cb) ~> t.save-filename!; cb null
         async.waterfall tasks, (err) ->
-            console.log "save-buffer-to-disk: err", err
-            cb null
+            console.log "save-buffer-to-disk: err", err if err?
+            cb err
         
     save-to-disk: (t, cb) ->
         console.log "save-to-disk: #{t.to-string!} is on a CDN" if @is-cdn t
-        console.log "save-to-disk: saving #{t.to-string!} to disk"
         return cb null if @is-cdn t 
         return cb null unless /^http/.test t.resolved
         return cb null unless t.resolved.slice(-1) != '/'
+        console.log "save-to-disk: saving #{t.to-string!} to disk"
         tasks = 
             * (cb) ~> @read-resolved t, cb
             * (body, cb) ~> @save-buffer-to-disk t, body, cb
