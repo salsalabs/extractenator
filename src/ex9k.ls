@@ -52,6 +52,10 @@ class FileTask extends Task
     get-original: -> @original = @elem.attr @attr
     save-filename: -> @elem.attr @attr, (@filename or @resolved)
 
+class HtmlTask extends Task
+    get-original: -> @original = @referer
+    save-filename: ->
+
 class ParseHTML
     (u, opts) ->
         @u = u
@@ -68,7 +72,7 @@ class ParseHTML
         # console.log "CSSParser.fixDeclaration: decl is", decl
         u = /url\(['"]*(.+?)['"]*\)/.exec(decl.value)[1]
         task = new CssTask
-        
+
     is-cdn: (t) ->
         url.parse t.original .hostname in config.CDN_HOSTS
 
@@ -125,7 +129,6 @@ class ParseHTML
         @request @u, (err, resp, body) ~>
             return cb err if err?
             $ = cheerio.load body.toString 'utf-8'
-
             queue = async.queue @process-task, 1
             queue.drain = ~>
                 console.log 'run: all done'
@@ -139,10 +142,22 @@ class ParseHTML
             $ 'a' .each -> queue.push new FileTask u, $(this), 'anchor', 'href', ->
 
     save-html-to-disk: (u, $, cb) ->
-        # http://stackoverflow.com/questions/982717/how-do-i-get-the-entire-pages-html-with-jquery
-        console.log "save-html-to-disk: saving #u to disk"
-        cb null
+        task = new HtmlTask u, '', '', ''
+        body = $.html!
+        @save-buffer-to-disk task, body, cb
 
+    save-buffer-to-disk: (t, body, cb) ->
+        t.get-filename @opts.dir
+        target-dir = path.dirname t.filename
+        fs.stat target-dir, (err, stats) ->
+            console.log "save-to-disk: fs.stat(#{path.dirname t.filename}) returned (#err, stats)"
+            fs.mkdirs target-dir, (err) ->
+                return cb err if err?
+                fs.writeFile t.filename, body, encoding: null, (err) ->
+                    return cb err
+                    console.log "save-to-disk: saving #{t.contentType} #{t.to-string!} to #{t.filename}"
+                    cb null
+        
     save-to-disk: (t, cb) ->
         console.log "save-to-disk: #{t.to-string!} is on a CDN" if @is-cdn t
         console.log "save-to-disk: saving #{t.to-string!} to disk"
@@ -151,16 +166,7 @@ class ParseHTML
         return cb null unless t.resolved.slice(-1) != '/'
         @read-resolved t, (err, body) ~>
             return cb err if err?
-            t.get-filename @opts.dir
-            target-dir = path.dirname t.filename
-            fs.stat target-dir, (err, stats) ->
-                console.log "save-to-disk: fs.stat(#{path.dirname t.filename}) returned (#err, stats)"
-                fs.mkdirs target-dir, (err) ->
-                    return cb err if err?
-                    fs.writeFile t.filename, body, encoding: null, (err) ->
-                        return cb err
-                        console.log "save-to-disk: saving #{t.contentType} #{t.to-string!} to #{t.filename}"
-                        cb null
+            @save-buffer-to-disk t, body, cb
 
 stanthonysf = 'https://www.stanthonysf.org/myaccount/'
 fourc = 'https://www.4chan.org/s'
