@@ -44,19 +44,25 @@ class Task
         @filename = (path.join dir, @get-directory!, path.basename @resolved .split '?')[0]
         console.log "get-filename: #{@to-string!} is filename #{@filename}"
 
-class CSSTask extends Task
+class CssTask extends Task
     get-original: -> @original = @elem.value
     save-filename: -> @elem.value (@filename or @resolved)
 
 class FileTask extends Task
     get-original: -> @original = @elem.attr @attr
-    save-filename: -> @elem.attr @attr, (@filename or @resolved)
+    save-filename: ->
+        console.log "FileTask.save-filename: #{@tag} #{@resolved} is filename #{@filename}"
+        @elem.attr @attr, (@filename or @resolved)
+        console.log "FileTask.save-filename: #{@tag} #{@resolved} is filename #{@filename}, contents of #{@attr} is #{@elem.attr @attr}"
 
 class HtmlTask extends Task
-    get-original: -> @original = @referer
+    get-original: ->
+        @original = @referer
+        @resolved = @original
+        @resolved = path.join @original, '/', "index.html" unless path.extname @original?
     save-filename: ->
 
-class ParseHTML
+class Extractenator9000
     (u, opts) ->
         @u = u
         @opts = opts
@@ -111,13 +117,10 @@ class ParseHTML
             | otherwise => @save-to-disk t, cb
 
     read-resolved: (t, cb) ->
-        console.log "read-resolved: reading #{t.resolved}"
         @request t.resolved, (err, resp, body) ~>
-            console.log "read-resolved: read #{t.resolved}, err is #err"
             return cb err if err?
             t.statusCode = resp.statusCode
             t.contentType = resp.headers['content-type']
-            console.log "read-resolved: read #{body.length} bytes from #{t.resolved} as #{t.contentType} with code #{t.statusCode}"
             # Ignore HTTP errors
             if t.statusCode != 200
                 console.log 'read-resolved: #{t.statusCode} on read from #{t.resolved}'
@@ -131,11 +134,10 @@ class ParseHTML
             $ = cheerio.load body.toString 'utf-8'
             queue = async.queue @process-task, 1
             queue.drain = ~>
-                console.log 'run: all done'
                 @save-html-to-disk @u, $, cb
 
             u = @u
-            $ 'link[href*=css]' .each -> queue.push new FileTask u, $(this), 'css', 'href', ->
+            $ 'link[href*=css]' .each -> queue.push new CssTask u, $(this), 'css', 'href', ->
             $ 'script[src*=js]' .each -> queue.push new FileTask u, $(this), 'script', 'src', ->
             $ 'style[type*=css]' .each -> queue.push new FileTask u, $(this), 'css-embedded', '' ->
             $ 'img:not([src^=data])' .each -> queue.push new FileTask u, $(this), 'img', 'src', ->
@@ -143,20 +145,20 @@ class ParseHTML
 
     save-html-to-disk: (u, $, cb) ->
         task = new HtmlTask u, '', '', ''
-        body = $.html!
-        @save-buffer-to-disk task, body, cb
+        @save-buffer-to-disk task, $.html!, cb
 
     save-buffer-to-disk: (t, body, cb) ->
         t.get-filename @opts.dir
         target-dir = path.dirname t.filename
-        fs.stat target-dir, (err, stats) ->
-            console.log "save-to-disk: fs.stat(#{path.dirname t.filename}) returned (#err, stats)"
-            fs.mkdirs target-dir, (err) ->
-                return cb err if err?
-                fs.writeFile t.filename, body, encoding: null, (err) ->
-                    return cb err
-                    console.log "save-to-disk: saving #{t.contentType} #{t.to-string!} to #{t.filename}"
-                    cb null
+        tasks = 
+            * (cb) ~> fs.stat target-dir, (err, stats) -> cb null
+            * (cb) ~> fs.mkdirs target-dir, cb
+            * (cb) ~> fs.mkdirs target-dir, cb
+            * (cb) ~> fs.writeFile t.filename, body, encoding: null, cb
+            * (cb) ~> t.save-filename!; cb null
+            async.waterfall tasks, (err) ~>
+                console.log "save-to-disk: saved #{t.contentType} #{t.to-string!} to #{t.filename}"
+                cb null
         
     save-to-disk: (t, cb) ->
         console.log "save-to-disk: #{t.to-string!} is on a CDN" if @is-cdn t
@@ -164,12 +166,13 @@ class ParseHTML
         return cb null if @is-cdn t 
         return cb null unless /^http/.test t.resolved
         return cb null unless t.resolved.slice(-1) != '/'
-        @read-resolved t, (err, body) ~>
-            return cb err if err?
-            @save-buffer-to-disk t, body, cb
+        tasks = 
+            * (cb) ~> @read-resolved t, cb
+            * (body, cb) ~> @save-buffer-to-disk t, body, cb
+        async.waterfall tasks, cb
 
 stanthonysf = 'https://www.stanthonysf.org/myaccount/'
 fourc = 'https://www.4chan.org/s'
-new ParseHTML fourc, dir: 'o' .run (err) ->
+new Extractenator9000 fourc, dir: 'o' .run (err) ->
     console.log err if err?
     process.exit 0
