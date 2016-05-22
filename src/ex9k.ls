@@ -31,16 +31,18 @@ class Task
     to-string: ->
         "#{@serialNumber} #{@referer} #{@tag} #{@attr} #{@resolved}"
 
-    get-directory: (t) ->
-        | /image\//.test t.contentType => \image
-        | /css/.test t.contentType => \css
-        | /javascript/.test t.contentType => \javascript
-        | /font/.test t.contentType => \font
+    get-directory:  ->
+        | /image\//.test @contentType => \image
+        | /css/.test @contentType => \css
+        | /javascript/.test @contentType => \javascript
+        | /font/.test @contentType => \font
         | otherwise ''
 
     get-filename: (dir) ->
-        @filename = path.join dir, path.basename @resolved .split '?' .first
-        console.log '#{@to-string!} is filename #{@filename}'
+        console.log "get-filename: #{@to-string!}"
+        # @filename = head path.join dir, path.basename @resolved .split '?'
+        @filename = (path.join dir, @get-directory!, path.basename @resolved .split '?')[0]
+        console.log "get-filename: #{@to-string!} is filename #{@filename}"
 
 class CSSTask extends Task
     get-original: -> @original = @elem.value
@@ -55,40 +57,43 @@ class ParseHTML
         @u = u
         @opts = opts
         # Always read URLs as buffers buffers.  Convert buffers to string as needed for parsing.
-        @rawRequest = request.defaults do
+        @request = request.defaults do
             jar: true
             encoding: null
             headers:
                 'Referer': @u
                 'User-Agent': config.USER_AGENT
+
+    fix-css-eclaration: (decl, cb) ~>
+        # console.log "CSSParser.fixDeclaration: decl is", decl
+        u = /url\(['"]*(.+?)['"]*\)/.exec(decl.value)[1]
+        task = new CssTask
         
     is-cdn: (t) ->
         url.parse t.original .hostname in config.CDN_HOSTS
 
     # @return [String|Buffer] Returns cleaned contents of the buffer?
     parse-css-buffer: (t, b, cb) ->
-        console.log "parse-css-buffer: #{t.to-string!} parsing #{b.length} bytes of CSS"
+        # console.log "parse-css-buffer: #{t.to-string!} parsing #{b.length} bytes of CSS"
         # obj = css.parse b.toString(), silent: true
-        # tasks = []
-        # tasks.push (cb) =>
-        #     decls = []
-        #     for rule in obj.stylesheet.rules when rule.declarations?
-        #         try
-        #             d = rule.declarations.filter (x) -> RegExp('url\\(').test x.value
-        #             decls = _.union decls, d if d.length > 0
-        #         catch err
-                     
-        #     async.eachSeries decls, @fixDeclaration, cb
+        # decls = []
+        # for rule in obj.stylesheet.rules when rule.declarations?
+        #     try
+        #         decls = decls ++ rule.declarations.filter (x) -> RegExp('url\\(').test x.value
+        #     catch err
+        # async.eachSeries decls, @fix-css-declaration, cb
 
-        console.log switch t.tag
-            | 'css' => "parse-css-buffer: writing file and updating CSS #{t.attr} attribute"
-            | 'css-embedded' => 'parse-css-buffer: updating element with CSS'
+        # console.log switch t.tag
+        #     | 'css' => "parse-css-buffer: writing file and updating CSS #{t.attr} attribute"
+        #     | 'css-embedded' => 'parse-css-buffer: updating element with CSS'
         cb null
 
     parse-css-file: (t, cb) ~>
-        @read-resolved t, (err, body) ->
-            return cb err if err?
-            @parse-css-buffer t, body, cb
+        console.log "parse-css-file: #{t.to-string!} parsing file"
+        tasks = 
+            * (cb) ~> @read-resolved t, cb
+            * (body, cb) ~> @parse-css-buffer t, body, cb
+        async.waterfall tasks, cb
 
     parse-embedded-css: (t, cb) ->
         console.log "parse-embedded-css: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS"
@@ -100,24 +105,24 @@ class ParseHTML
             | 'css-embedded' => @parse-embedded-css t, cb
             | 'anchor' => t.save-filename!; cb null
             | otherwise => @save-to-disk t, cb
-        cb null
 
-    read-resolved: (t, cb) ~>
+    read-resolved: (t, cb) ->
         console.log "read-resolved: reading #{t.resolved}"
-        @rawRequest t.resolved, (err, resp, body) ->
+        @request t.resolved, (err, resp, body) ~>
+            console.log "read-resolved: read #{t.resolved}, err is #err"
             return cb err if err?
             t.statusCode = resp.statusCode
             t.contentType = resp.headers['content-type']
             console.log "read-resolved: read #{body.length} bytes from #{t.resolved} as #{t.contentType} with code #{t.statusCode}"
+            # Ignore HTTP errors
             if t.statusCode != 200
-                # Ignore HTTP errors
                 console.log 'read-resolved: #{t.statusCode} on read from #{t.resolved}'
                 return cb null
             cb null, body
 
     run: (cb) ->
         console.log "run: reading #{@u}"
-        @rawRequest @u, (err, resp, body) ~>
+        @request @u, (err, resp, body) ~>
             return cb err if err?
             $ = cheerio.load body.toString 'utf-8'
 
@@ -147,8 +152,10 @@ class ParseHTML
         @read-resolved t, (err, body) ~>
             return cb err if err?
             t.get-filename @opts.dir
-            fs.stat path.basename t.filename, (err, stats) ->
-                fs.mkdirs path.basename t.filename, (err) ->
+            target-dir = path.dirname t.filename
+            fs.stat target-dir, (err, stats) ->
+                console.log "save-to-disk: fs.stat(#{path.dirname t.filename}) returned (#err, stats)"
+                fs.mkdirs target-dir, (err) ->
                     return cb err if err?
                     fs.writeFile t.filename, body, encoding: null, (err) ->
                         return cb err
