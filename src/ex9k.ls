@@ -1,11 +1,12 @@
 require! async
 require! cheerio
+require! './config'
 require! css
 fs = require 'fs-extra'
 require! path
+{each, filter, flatten, map, take-while} = require 'prelude-ls'
 require! request
 require! url
-require! './config'
 
 class Task
     @serialNumber = 0
@@ -40,13 +41,12 @@ class Task
 
     get-filename: (dir) ->
         console.log "get-filename: #{@to-string!}"
-        # @filename = head path.join dir, path.basename @resolved .split '?'
         @filename = (path.join dir, @get-directory!, path.basename @resolved .split '?')[0]
         console.log "get-filename: #{@to-string!} is filename #{@filename}"
+    
+    get-html: -> @elem.html!
 
-class CssTask extends Task
-    get-original: -> @original = @elem.value
-    save-filename: -> @elem.value (@filename or @resolved)
+    set-html: (body) ->@elem.html body
 
 class FileTask extends Task
     get-original: -> @original = @elem.attr @attr
@@ -72,47 +72,58 @@ class Extractenator9000
                 'Referer': @u
                 'User-Agent': config.USER_AGENT
 
-    fix-css-eclaration: (decl, cb) ~>
-        # console.log "CSSParser.fixDeclaration: decl is", decl
-        u = /url\(['"]*(.+?)['"]*\)/.exec(decl.value)[1]
-        task = new CssTask
+    fix-url: (x) -> x.value = x.value.replace 'url', 'URL'
+
+    has-url: (x) -> /url/.test x.value
 
     is-cdn: (t) ->
         url.parse t.original .hostname in config.CDN_HOSTS
 
-    # @return [String|Buffer] Returns cleaned contents of the buffer?
-    parse-css-buffer: (t, b, cb) ->
-        # console.log "parse-css-buffer: #{t.to-string!} parsing #{b.length} bytes of CSS"
-        # obj = css.parse b.toString(), silent: true
-        # decls = []
-        # for rule in obj.stylesheet.rules when rule.declarations?
-        #     try
-        #         decls = decls ++ rule.declarations.filter (x) -> RegExp('url\\(').test x.value
-        #     catch err
-        # async.eachSeries decls, @fix-css-declaration, cb
+    css-decl-filter: (decl) ->
+        try
+            /url\(/.text decl.value
+        catch err
+            console.log "css-decl-filter, err is ", err, " on decl", decl
+            false
 
-        # console.log switch t.tag
-        #     | 'css' => "parse-css-buffer: writing file and updating CSS #{t.attr} attribute"
-        #     | 'css-embedded' => 'parse-css-buffer: updating element with CSS'
-        cb null
+    parse-css-buffer: (t, body, cb) ->
+      obj = css.parse body.toString!, silent: true, source: t.referer
+      console.log "CSS object has a stylesheet?#{obj.stylesheet?}"
+      return cb null unless obj.stylesheet?
+      console.log "CSS object stylesheet has rules? #{obj.stylesheet.rules?}"
+      retrun cb null unless obj.stylesheet.rules?
+      take-while (.declarations?.length > 0), obj.stylesheet.rules
+        |> map (.declarations)
+        |> flatten
+        |> filter @has-url
+        |> each @fix-url
+
+        console.log switch t.tag
+            | 'css' => "parse-css-buffer: writing file and updating CSS #{t.attr} attribute"
+            | 'css-embedded' => 'parse-css-buffer: updating element with CSS'
+        cb null, css.stringify obj
 
     parse-css-file: (t, cb) ~>
         console.log "parse-css-file: #{t.to-string!} parsing file"
         tasks = 
             * (cb) ~> @read-resolved t, cb
             * (body, cb) ~> @parse-css-buffer t, body, cb
+            * (body, cb) ~> @save-buffer-to-disk t, body, cb
         async.waterfall tasks, cb
 
     parse-embedded-css: (t, cb) ->
         console.log "parse-embedded-css: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS"
-        @parse-css-buffer t, t.elem.html(), cb
+        tasks = 
+            * (cb) ~>@parse-css-buffer t, t.get-html!, cb
+            * (body, cb) ~> t.set-html body, cb
+        async.waterfall tasks, cb
 
     process-task: (t, cb) ~>
         switch t.tag
             | 'css' => @parse-css-file t, cb
             | 'css-embedded' => @parse-embedded-css t, cb
             | 'anchor' => t.save-filename!; cb null
-            | otherwise => @save-to-disk t, cb
+            | otherwise => @save-url-to-disk t, cb
 
     read-resolved: (t, cb) ->
         @request t.resolved, (err, resp, body) ~>
@@ -135,15 +146,11 @@ class Extractenator9000
                 @save-html-to-disk @u, $, cb
 
             u = @u
-            $ 'link[href*=css]' .each -> queue.push new CssTask u, $(this), 'css', 'href', ->
+            $ 'link[href*=css]' .each -> queue.push new FileTask u, $(this), 'css', 'href', ->
             $ 'script[src*=js]' .each -> queue.push new FileTask u, $(this), 'script', 'src', ->
             $ 'style[type*=css]' .each -> queue.push new FileTask u, $(this), 'css-embedded', '' ->
             $ 'img:not([src^=data])' .each -> queue.push new FileTask u, $(this), 'img', 'src', ->
             $ 'a' .each -> queue.push new FileTask u, $(this), 'anchor', 'href', ->
-
-    save-html-to-disk: (u, $, cb) ->
-        task = new HtmlTask u, '', '', ''
-        @save-buffer-to-disk task, $.html!, cb
 
     save-buffer-to-disk: (t, body, cb) ->
         t.get-filename @opts.dir
@@ -156,13 +163,17 @@ class Extractenator9000
         async.waterfall tasks, (err) ->
             console.log "save-buffer-to-disk: err", err if err?
             cb err
-        
-    save-to-disk: (t, cb) ->
-        console.log "save-to-disk: #{t.to-string!} is on a CDN" if @is-cdn t
+
+    save-html-to-disk: (u, $, cb) ->
+        task = new HtmlTask u, '', '', ''
+        @save-buffer-to-disk task, $.html!, cb
+
+    save-url-to-disk: (t, cb) ->
+        console.log "save-url-to-disk: #{t.to-string!} is on a CDN" if @is-cdn t
         return cb null if @is-cdn t 
         return cb null unless /^http/.test t.resolved
         return cb null unless t.resolved.slice(-1) != '/'
-        console.log "save-to-disk: saving #{t.to-string!} to disk"
+        console.log "save-url-to-disk: saving #{t.to-string!} to disk"
         tasks = 
             * (cb) ~> @read-resolved t, cb
             * (body, cb) ~> @save-buffer-to-disk t, body, cb
