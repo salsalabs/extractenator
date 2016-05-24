@@ -40,7 +40,7 @@ class Task
         | otherwise ''
 
     get-filename: (dir) ->
-        console.log "get-filename: #{@to-string!}"
+        # console.log "get-filename: #{@to-string!}"
         @filename = (path.join dir, @get-directory!, path.basename @resolved .split '?')[0]
         console.log "get-filename: #{@to-string!} is filename #{@filename}"
     
@@ -91,7 +91,7 @@ class Extractenator9000
         cb null, css.stringify obj
 
     parse-css-file: (t, cb) ~>
-        console.log "parse-css-file: #{t.to-string!} parsing file"
+        # console.log "parse-css-file: #{t.to-string!} parsing file"
         tasks = 
             * (cb) ~> @read-resolved t, cb
             * (body, cb) ~> @parse-css-buffer t, body, cb
@@ -99,7 +99,7 @@ class Extractenator9000
         async.waterfall tasks, cb
 
     parse-embedded-css: (t, cb) ->
-        console.log "parse-embedded-css: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS"
+        # console.log "parse-embedded-css: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS"
         tasks = 
             * (cb) ~>@parse-css-buffer t, t.get-html!, cb
             * (body, cb) ~> t.set-html body, cb
@@ -138,8 +138,6 @@ class Extractenator9000
         # $ 'style[type*=css]' .each -> queue.push new FileTask u, $(this), 'css-embedded', '' ->
         $ 'img:not([src^=data])' .each -> files.push new FileTask u, $(this), 'img', 'src'
         $ 'a' .each -> files.push new FileTask u, $(this), 'anchor', 'href'
-        # console.log "load-task-list: files", files
-        # console.log "load_task-list: css-files", css-files
         cb null, $, files, css-files
        
     run: (cb) ->
@@ -149,11 +147,10 @@ class Extractenator9000
             * (resp, body, cb) ~> cb null, cheerio.load body.toString 'utf-8'
             * ($, cb) ~> @load-task-lists $, cb
             * ($, files, css-files, cb) ~> 
-                console.log "run: 4th step with #{files.length} files and #{css-files.length} CSS files"
                 file-tasks =
                     * (cb) ~> async.each files, @process-file, cb
                     * (cb) ~> async.each css-files, @process-css, cb
-                async.waterfall file-tasks, (err) -> console.log "run: inner waterfall err", err; cb err, $
+                async.waterfall file-tasks, (err) -> cb err, $
             * ($, cb) ~> @save-html-to-disk $, cb
         async.waterfall tasks, cb
 
@@ -173,6 +170,7 @@ class Extractenator9000
 
     save-html-to-disk: ($, cb) ->
         task = new HtmlTask @u, '', '', ''
+        console.log "save-html-to-disk, task #{task.to-string!}"
         @save-buffer-to-disk task, $.html!, cb
 
     save-url-to-disk: (t, cb) ->
