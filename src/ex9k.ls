@@ -181,8 +181,9 @@ class Extractenator9000
             * (body, cb) ~> @save-buffer-to-disk t, body, cb
         async.waterfall tasks, cb
 
-stanthonysf = 'https://www.stanthonysf.org/myaccount/'
 fourc = 'https://www.4chan.org/s'
-new Extractenator9000 fourc, dir: 'o' .run (err) ->
+reddit = "https://reddit.com/r/pics"
+stanthonysf = 'https://www.stanthonysf.org/myaccount/'
+new Extractenator9000 stanthonysf, dir: 'o' .run (err) ->
     console.log err if err?
     process.exit 0
