@@ -50,7 +50,7 @@ class Task
 
 class FileTask extends Task
     get-original: -> @original = @elem.attr @attr
-    save-filename: -> @elem.attr @attr, (@filename or @resolved)
+    save-filename: -> @elem.attr @attr, "/#{@filename or @resolved}"
 
 class HtmlTask extends Task
     get-original: ->
@@ -79,28 +79,15 @@ class Extractenator9000
     is-cdn: (t) ->
         url.parse t.original .hostname in config.CDN_HOSTS
 
-    css-decl-filter: (decl) ->
-        try
-            /url\(/.text decl.value
-        catch err
-            console.log "css-decl-filter, err is ", err, " on decl", decl
-            false
-
     parse-css-buffer: (t, body, cb) ->
-      obj = css.parse body.toString!, silent: true, source: t.referer
-      console.log "CSS object has a stylesheet?#{obj.stylesheet?}"
-      return cb null unless obj.stylesheet?
-      console.log "CSS object stylesheet has rules? #{obj.stylesheet.rules?}"
-      retrun cb null unless obj.stylesheet.rules?
-      take-while (.declarations?.length > 0), obj.stylesheet.rules
-        |> map (.declarations)
-        |> flatten
-        |> filter @has-url
-        |> each @fix-url
-
-        console.log switch t.tag
-            | 'css' => "parse-css-buffer: writing file and updating CSS #{t.attr} attribute"
-            | 'css-embedded' => 'parse-css-buffer: updating element with CSS'
+        obj = css.parse body.toString!, silent: true, source: t.referer
+        return cb null unless obj.stylesheet?
+        return cb null unless obj.stylesheet.rules?
+        take-while (.declarations?.length > 0), obj.stylesheet.rules
+            |> map (.declarations)
+            |> flatten
+            |> filter @has-url
+            |> each @fix-url
         cb null, css.stringify obj
 
     parse-css-file: (t, cb) ~>
@@ -118,10 +105,13 @@ class Extractenator9000
             * (body, cb) ~> t.set-html body, cb
         async.waterfall tasks, cb
 
-    process-task: (t, cb) ~>
+    process-css: (t, cb) ~>
+        console.log "process-css #{t.to-string!}"
+        cb null
+
+    process-file: (t, cb) ~>
+        console.log "process-file #{t.to-string!}"
         switch t.tag
-            | 'css' => @parse-css-file t, cb
-            | 'css-embedded' => @parse-embedded-css t, cb
             | 'anchor' => t.save-filename!; cb null
             | otherwise => @save-url-to-disk t, cb
 
@@ -136,21 +126,36 @@ class Extractenator9000
                 return cb null, null
             cb null, body
 
+    load-task-lists: ($, cb) ->
+        u = @u
+        files = []
+        css-files = [] 
+        $ 'link[href*=css]' .each ->
+            t = new FileTask u, $(this), 'css', 'href'
+            files.push t
+            css-files.push t
+        $ 'script[src*=js]' .each -> files.push new FileTask u, $(this), 'script', 'src'
+        # $ 'style[type*=css]' .each -> queue.push new FileTask u, $(this), 'css-embedded', '' ->
+        $ 'img:not([src^=data])' .each -> files.push new FileTask u, $(this), 'img', 'src'
+        $ 'a' .each -> files.push new FileTask u, $(this), 'anchor', 'href'
+        # console.log "load-task-list: files", files
+        # console.log "load_task-list: css-files", css-files
+        cb null, $, files, css-files
+       
     run: (cb) ->
-        console.log "run: reading #{@u}"
-        @request @u, (err, resp, body) ~>
-            return cb err if err?
-            $ = cheerio.load body.toString 'utf-8'
-            queue = async.queue @process-task, 1
-            queue.drain = ~>
-                @save-html-to-disk @u, $, cb
-
-            u = @u
-            # $ 'link[href*=css]' .each -> queue.push new FileTask u, $(this), 'css', 'href', ->
-            $ 'script[src*=js]' .each -> queue.push new FileTask u, $(this), 'script', 'src', ->
-            # $ 'style[type*=css]' .each -> queue.push new FileTask u, $(this), 'css-embedded', '' ->
-            $ 'img:not([src^=data])' .each -> queue.push new FileTask u, $(this), 'img', 'src', ->
-            $ 'a' .each -> queue.push new FileTask u, $(this), 'anchor', 'href', ->
+        u = @u
+        tasks =
+            * (cb) ~>@request u, cb
+            * (resp, body, cb) ~> cb null, cheerio.load body.toString 'utf-8'
+            * ($, cb) ~> @load-task-lists $, cb
+            * ($, files, css-files, cb) ~> 
+                console.log "run: 4th step with #{files.length} files and #{css-files.length} CSS files"
+                file-tasks =
+                    * (cb) ~> async.each files, @process-file, cb
+                    * (cb) ~> async.each css-files, @process-css, cb
+                async.waterfall file-tasks, (err) -> console.log "run: inner waterfall err", err; cb err, $
+            * ($, cb) ~> @save-html-to-disk $, cb
+        async.waterfall tasks, cb
 
     save-buffer-to-disk: (t, body, cb) ->
         # console.log "save-buffer-to-disk: #{t.to-string!}"
@@ -166,8 +171,8 @@ class Extractenator9000
             # console.log "save-buffer-to-disk: #{t.to-string!} saved as #{t.content-type} file #{t.filename}"
             cb null
 
-    save-html-to-disk: (u, $, cb) ->
-        task = new HtmlTask u, '', '', ''
+    save-html-to-disk: ($, cb) ->
+        task = new HtmlTask @u, '', '', ''
         @save-buffer-to-disk task, $.html!, cb
 
     save-url-to-disk: (t, cb) ->
@@ -181,9 +186,9 @@ class Extractenator9000
             * (body, cb) ~> @save-buffer-to-disk t, body, cb
         async.waterfall tasks, cb
 
-fourc = 'https://www.4chan.org/s'
+txdisabled = 'http://txdisabilities.org/'
 reddit = "https://reddit.com/r/pics"
 stanthonysf = 'https://www.stanthonysf.org/myaccount/'
-new Extractenator9000 stanthonysf, dir: 'o' .run (err) ->
+new Extractenator9000 txdisabled, dir: 'o' .run (err) ->
     console.log err if err?
     process.exit 0
