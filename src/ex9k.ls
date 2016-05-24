@@ -40,13 +40,20 @@ class Task
         | otherwise ''
 
     get-filename: (dir) ->
-        console.log "get-filename: #{@to-string!}"
+        console.log "get-filename: #{@to-string!} with content-type #{@content-type}"
         @filename = (path.join dir, @get-directory!, path.basename @resolved .split '?')[0]
         console.log "get-filename: #{@to-string!} is filename #{@filename}"
     
     get-html: -> @elem.html!
 
     set-html: (body) ->@elem.html body
+
+class CssTask extends Task
+    get-original: ->
+        m = /^(.+url\(['"]*)(.+)(['"]*\))/.exec @elem.value
+        return unless m?
+        @original = m[2]
+    save-filename: -> @elem.value = @elem.value.replace @original, @filename
 
 class FileTask extends Task
     get-original: -> @original = @elem.attr @attr
@@ -72,7 +79,16 @@ class Extractenator9000
                 'Referer': @u
                 'User-Agent': config.USER_AGENT
 
-    fix-url: (x) -> x.value = x.value.replace 'url', 'URL'
+    fix-css-url: (args, cb) ~>
+        console.log args
+        m = /^(.+url\(['"]*)(.+)(['"]*\))/.exec args.decl.value
+        return cb null unless m?
+        task = new CssTask args.referer, args.decl, 'css', 'css'
+        console.log 'fix-css-url: task', task
+        @save-url-to-disk task, (err) ->
+            console.log "fix-css-url: err is", err
+            console.log "fox-css-url: task is", task
+            cb err
 
     has-url: (x) -> /url/.test x.value
 
@@ -87,21 +103,17 @@ class Extractenator9000
             false
 
     parse-css-buffer: (t, body, cb) ->
-      obj = css.parse body.toString!, silent: true, source: t.referer
-      console.log "CSS object has a stylesheet?#{obj.stylesheet?}"
-      return cb null unless obj.stylesheet?
-      console.log "CSS object stylesheet has rules? #{obj.stylesheet.rules?}"
-      retrun cb null unless obj.stylesheet.rules?
-      take-while (.declarations?.length > 0), obj.stylesheet.rules
-        |> map (.declarations)
-        |> flatten
-        |> filter @has-url
-        |> each @fix-url
-
-        console.log switch t.tag
-            | 'css' => "parse-css-buffer: writing file and updating CSS #{t.attr} attribute"
-            | 'css-embedded' => 'parse-css-buffer: updating element with CSS'
-        cb null, css.stringify obj
+        obj = css.parse body.toString!, silent: true, source: t.referer
+        console.log "CSS object has a stylesheet?#{obj.stylesheet?}"
+        return cb null unless obj.stylesheet?
+        console.log "CSS object stylesheet has rules? #{obj.stylesheet.rules?}"
+        return cb null unless obj.stylesheet.rules?
+        decls = take-while (.declarations?.length > 0), obj.stylesheet.rules
+            |> map (.declarations)
+            |> flatten
+            |> filter @has-url
+        decls2 = decls.map (x) -> referer: t.referer, decl: x
+        async.each decls2, @fix-css-url, cb    
 
     parse-css-file: (t, cb) ~>
         console.log "parse-css-file: #{t.to-string!} parsing file"
@@ -114,7 +126,7 @@ class Extractenator9000
     parse-embedded-css: (t, cb) ->
         console.log "parse-embedded-css: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS"
         tasks = 
-            * (cb) ~>@parse-css-buffer t, t.get-html!, cb
+            * (cb) ~> @parse-css-buffer t, t.get-html!, cb
             * (body, cb) ~> t.set-html body, cb
         async.waterfall tasks, cb
 
@@ -132,8 +144,8 @@ class Extractenator9000
             t.contentType = resp.headers['content-type']
             # Ignore HTTP errors
             if t.statusCode != 200
-                console.log 'read-resolved: #{t.statusCode} on read from #{t.resolved}'
-                return cb null
+                console.log "read-resolved: #{t.statusCode} on read from #{t.resolved}"
+                return cb null, null
             cb null, body
 
     run: (cb) ->
@@ -146,13 +158,14 @@ class Extractenator9000
                 @save-html-to-disk @u, $, cb
 
             u = @u
-            $ 'link[href*=css]' .each -> queue.push new FileTask u, $(this), 'css', 'href', ->
-            $ 'script[src*=js]' .each -> queue.push new FileTask u, $(this), 'script', 'src', ->
-            $ 'style[type*=css]' .each -> queue.push new FileTask u, $(this), 'css-embedded', '' ->
+            $ 'link[rel="stylesheet"]' .each -> queue.push new FileTask u, $(this), 'css', 'href', ->
+            $ 'script[type="text/javascript"]' .each -> queue.push new FileTask u, $(this), 'script', 'src', ->
+            $ 'style[type*="text/css"]' .each -> queue.push new FileTask u, $(this), 'css-embedded', '' ->
             $ 'img:not([src^=data])' .each -> queue.push new FileTask u, $(this), 'img', 'src', ->
             $ 'a' .each -> queue.push new FileTask u, $(this), 'anchor', 'href', ->
 
     save-buffer-to-disk: (t, body, cb) ->
+        console.log "save-buffer-to-disk: #{t.to-string!}"
         t.get-filename @opts.dir
         target-dir = path.dirname t.filename
         tasks = 
@@ -169,6 +182,7 @@ class Extractenator9000
         @save-buffer-to-disk task, $.html!, cb
 
     save-url-to-disk: (t, cb) ->
+        console.log "save-url-to-disk: #{t.to-string!}"
         console.log "save-url-to-disk: #{t.to-string!} is on a CDN" if @is-cdn t
         return cb null if @is-cdn t 
         return cb null unless /^http/.test t.resolved
@@ -176,11 +190,11 @@ class Extractenator9000
         console.log "save-url-to-disk: saving #{t.to-string!} to disk"
         tasks = 
             * (cb) ~> @read-resolved t, cb
-            * (body, cb) ~> @save-buffer-to-disk t, body, cb
+            * (body, cb) ~> return cb null unless body?; @save-buffer-to-disk t, body, cb
         async.waterfall tasks, cb
 
 stanthonysf = 'https://www.stanthonysf.org/myaccount/'
 fourc = 'https://www.4chan.org/s'
-new Extractenator9000 fourc, dir: 'o' .run (err) ->
+new Extractenator9000 stanthonysf, dir: 'o' .run (err) ->
     console.log err if err?
     process.exit 0
