@@ -133,7 +133,7 @@ class Extractenator9000
             # Ignore HTTP errors
             if t.statusCode != 200
                 console.log 'read-resolved: #{t.statusCode} on read from #{t.resolved}'
-                return cb null
+                return cb null, null
             cb null, body
 
     run: (cb) ->
@@ -146,13 +146,14 @@ class Extractenator9000
                 @save-html-to-disk @u, $, cb
 
             u = @u
-            $ 'link[href*=css]' .each -> queue.push new FileTask u, $(this), 'css', 'href', ->
+            # $ 'link[href*=css]' .each -> queue.push new FileTask u, $(this), 'css', 'href', ->
             $ 'script[src*=js]' .each -> queue.push new FileTask u, $(this), 'script', 'src', ->
-            $ 'style[type*=css]' .each -> queue.push new FileTask u, $(this), 'css-embedded', '' ->
+            # $ 'style[type*=css]' .each -> queue.push new FileTask u, $(this), 'css-embedded', '' ->
             $ 'img:not([src^=data])' .each -> queue.push new FileTask u, $(this), 'img', 'src', ->
             $ 'a' .each -> queue.push new FileTask u, $(this), 'anchor', 'href', ->
 
     save-buffer-to-disk: (t, body, cb) ->
+        # console.log "save-buffer-to-disk: #{t.to-string!}"
         t.get-filename @opts.dir
         target-dir = path.dirname t.filename
         tasks = 
@@ -162,7 +163,8 @@ class Extractenator9000
             * (cb) ~> t.save-filename!; cb null
         async.waterfall tasks, (err) ->
             console.log "save-buffer-to-disk: err", err if err?
-            cb err
+            # console.log "save-buffer-to-disk: #{t.to-string!} saved as #{t.content-type} file #{t.filename}"
+            cb null
 
     save-html-to-disk: (u, $, cb) ->
         task = new HtmlTask u, '', '', ''
