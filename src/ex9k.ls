@@ -28,7 +28,7 @@ class Task
         @resolved = "#{u.protocol}#{@original}" if RegExp '^//' .test @original 
         o = url.parse @original
         @resolved = url.resolve u, @original unless o.protocol?
-
+        console.log "@to-string!" if @tag ~= /css/
     to-string: ->
         "#{@serialNumber} #{@referer} #{@tag} #{@attr} #{@resolved}"
 
