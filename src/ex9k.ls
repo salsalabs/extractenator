@@ -60,24 +60,12 @@ class HtmlTask extends Task
         @contentType = 'text/html'
     save-filename: ->
 
-class Extractenator9000
-    (u, opts) ->
-        @u = u
-        @opts = opts
-        # Always read URLs as buffers buffers.  Convert buffers to string as needed for parsing.
-        @request = request.defaults do
-            jar: true
-            encoding: null
-            headers:
-                'Referer': @u
-                'User-Agent': config.USER_AGENT
-
-    fix-url: (x) -> x.value = x.value.replace 'url', 'URL'
+class CssProcessor
+    (css-files) ->
+        @css-files = css-files
+        console.log "CssProcessor: processing #{css-tasks.length} CSS tasks"
 
     has-url: (x) -> /url/.test x.value
-
-    is-cdn: (t) ->
-        url.parse t.original .hostname in config.CDN_HOSTS
 
     parse-css-buffer: (t, body, cb) ->
         obj = css.parse body.toString!, silent: true, source: t.referer
@@ -108,6 +96,30 @@ class Extractenator9000
     process-css: (t, cb) ~>
         console.log "process-css #{t.to-string!}"
         cb null
+    
+    run: (cb) ->
+        cb null
+
+class Extractenator9000
+    (u, opts) ->
+        @u = u
+        @opts = opts
+        # Always read URLs as buffers buffers.  Convert buffers to string as needed for parsing.
+        @request = request.defaults do
+            jar: true
+            encoding: null
+            headers:
+                'Referer': @u
+                'User-Agent': config.USER_AGENT
+
+    is-cdn: (t) ->
+        url.parse t.original .hostname in config.CDN_HOSTS
+
+    # @param [Array<Task>] css-tasks tasks containing CSS files. The files already exist, so we
+    # will  be overwriting them to make corrections based on what they find.
+    process-css-tasks: (css-tasks, cb) ->
+        console.log "process-css-tasks: processing #{css-tasks.length} CSS tasks"
+        new CssProcessor (css-tasks).run cb
 
     process-file: (t, cb) ~>
         console.log "process-file #{t.to-string!}"
@@ -128,17 +140,17 @@ class Extractenator9000
 
     load-task-lists: ($, cb) ->
         u = @u
-        files = []
-        css-files = [] 
+        file-tasks = []
+        css-tasks = [] 
         $ 'link[href*=css]' .each ->
             t = new FileTask u, $(this), 'css', 'href'
-            files.push t
-            css-files.push t
-        $ 'script[src*=js]' .each -> files.push new FileTask u, $(this), 'script', 'src'
+            file-tasks.push t
+            css-tasks.push t
+        $ 'script[src*=js]' .each -> file-tasks.push new FileTask u, $(this), 'script', 'src'
         # $ 'style[type*=css]' .each -> queue.push new FileTask u, $(this), 'css-embedded', '' ->
-        $ 'img:not([src^=data])' .each -> files.push new FileTask u, $(this), 'img', 'src'
-        $ 'a' .each -> files.push new FileTask u, $(this), 'anchor', 'href'
-        cb null, $, files, css-files
+        $ 'img:not([src^=data])' .each -> file-tasks.push new FileTask u, $(this), 'img', 'src'
+        $ 'a' .each -> file-tasks.push new FileTask u, $(this), 'anchor', 'href'
+        cb null, $, file-tasks, css-tasks
        
     run: (cb) ->
         u = @u
@@ -146,11 +158,12 @@ class Extractenator9000
             * (cb) ~>@request u, cb
             * (resp, body, cb) ~> cb null, cheerio.load body.toString 'utf-8'
             * ($, cb) ~> @load-task-lists $, cb
-            * ($, files, css-files, cb) ~> 
+            * ($, files, css-tasks, cb) ~> 
                 file-tasks =
                     * (cb) ~> async.each files, @process-file, cb
-                    * (cb) ~> async.each css-files, @process-css, cb
-                async.waterfall file-tasks, (err) -> cb err, $
+                    * (cb) ~> async.each css-tasks, @process-css, cb
+                async.waterfall file-tasks, (err) -> cb err, $, css-tasks
+            * ($, css-tasks, cb) ~> @process-css-tasks css-tasks, (err) -> cb err, $
             * ($, cb) ~> @save-html-to-disk $, cb
         async.waterfall tasks, cb
 
