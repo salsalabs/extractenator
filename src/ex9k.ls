@@ -10,11 +10,7 @@ require! url
 
 class Task
     @serialNumber = 0
-    (referer, elem, tag, attr) ->
-        @referer = referer
-        @elem = elem
-        @tag = tag
-        @attr = attr
+    (@referer, @elem, @tag, @attr) ->
         @resolved = null
         @serialNumber = @@serialNumber++
         @contentType = null
@@ -28,6 +24,7 @@ class Task
         @resolved = "#{u.protocol}#{@original}" if RegExp '^//' .test @original 
         o = url.parse @original
         @resolved = url.resolve u, @original unless o.protocol?
+        @resolved = @original unless @resolved?
 
     to-string: ->
         "#{@serialNumber} #{@referer} #{@tag} #{@attr} #{@resolved}"
@@ -40,9 +37,8 @@ class Task
         | otherwise ''
 
     get-filename: (dir) ->
-        # console.log "get-filename: #{@to-string!}"
         @filename = (path.join dir, @get-directory!, path.basename @resolved .split '?')[0]
-        console.log "get-filename: #{@to-string!} is filename #{@filename}"
+        # console.log "get-filename: #{@to-string!} is filename #{@filename}"
     
     get-html: -> @elem.html!
 
@@ -60,50 +56,8 @@ class HtmlTask extends Task
         @contentType = 'text/html'
     save-filename: ->
 
-class CssProcessor
-    (css-files) ->
-        @css-files = css-files
-        console.log "CssProcessor: processing #{css-tasks.length} CSS tasks"
-
-    has-url: (x) -> /url/.test x.value
-
-    parse-css-buffer: (t, body, cb) ->
-        obj = css.parse body.toString!, silent: true, source: t.referer
-        return cb null unless obj.stylesheet?
-        return cb null unless obj.stylesheet.rules?
-        take-while (.declarations?.length > 0), obj.stylesheet.rules
-            |> map (.declarations)
-            |> flatten
-            |> filter @has-url
-            |> each @fix-url
-        cb null, css.stringify obj
-
-    parse-css-file: (t, cb) ~>
-        # console.log "parse-css-file: #{t.to-string!} parsing file"
-        tasks = 
-            * (cb) ~> @read-resolved t, cb
-            * (body, cb) ~> @parse-css-buffer t, body, cb
-            * (body, cb) ~> @save-buffer-to-disk t, body, cb
-        async.waterfall tasks, cb
-
-    parse-embedded-css: (t, cb) ->
-        # console.log "parse-embedded-css: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS"
-        tasks = 
-            * (cb) ~>@parse-css-buffer t, t.get-html!, cb
-            * (body, cb) ~> t.set-html body, cb
-        async.waterfall tasks, cb
-
-    process-css: (t, cb) ~>
-        console.log "process-css #{t.to-string!}"
-        cb null
-    
-    run: (cb) ->
-        cb null
-
 class Extractenator9000
-    (u, opts) ->
-        @u = u
-        @opts = opts
+    (@u, @opts) ->
         # Always read URLs as buffers buffers.  Convert buffers to string as needed for parsing.
         @request = request.defaults do
             jar: true
@@ -112,31 +66,10 @@ class Extractenator9000
                 'Referer': @u
                 'User-Agent': config.USER_AGENT
 
+    has-url: (x) -> /url/.test x.value
+
     is-cdn: (t) ->
         url.parse t.original .hostname in config.CDN_HOSTS
-
-    # @param [Array<Task>] css-tasks tasks containing CSS files. The files already exist, so we
-    # will  be overwriting them to make corrections based on what they find.
-    process-css-tasks: (css-tasks, cb) ->
-        console.log "process-css-tasks: processing #{css-tasks.length} CSS tasks"
-        new CssProcessor (css-tasks).run cb
-
-    process-file: (t, cb) ~>
-        console.log "process-file #{t.to-string!}"
-        switch t.tag
-            | 'anchor' => t.save-filename!; cb null
-            | otherwise => @save-url-to-disk t, cb
-
-    read-resolved: (t, cb) ->
-        @request t.resolved, (err, resp, body) ~>
-            return cb err if err?
-            t.statusCode = resp.statusCode
-            t.contentType = resp.headers['content-type']
-            # Ignore HTTP errors
-            if t.statusCode != 200
-                console.log 'read-resolved: #{t.statusCode} on read from #{t.resolved}'
-                return cb null, null
-            cb null, body
 
     load-task-lists: ($, cb) ->
         u = @u
@@ -151,19 +84,73 @@ class Extractenator9000
         $ 'img:not([src^=data])' .each -> file-tasks.push new FileTask u, $(this), 'img', 'src'
         $ 'a' .each -> file-tasks.push new FileTask u, $(this), 'anchor', 'href'
         cb null, $, file-tasks, css-tasks
-       
+ 
+    parse-css-buffer: (t, body, cb) ->
+        console.log "parse-css-buffer: #{t.to-string!}, body has #{body?.length} bytes"
+        return cb null unless body?
+        obj = css.parse body.toString!, silent: true, source: t.referer
+        return cb null unless obj.stylesheet?
+        return cb null unless obj.stylesheet.rules?
+        decls = take-while (.declarations?.length > 0), obj.stylesheet.rules
+            |> map (.declarations)
+            |> flatten
+            |> filter @has-url
+        tasks = 
+            * (cb) ~> async.each decls, @process-decl, cb
+            * (cb) ~> css.stringify obj; cb null
+        async.waterfall tasks, cb
+
+    parse-embedded-css: (t, cb) ->
+        # console.log "parse-embedded-css: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS"
+        tasks = 
+            * (cb) ~>@parse-css-buffer t, t.get-html!, cb
+            * (body, cb) ~> t.set-html body, cb
+        async.waterfall tasks, cb
+
+    process-decl: (decl, cb) ->
+        console.log "process-decl: decl", decl
+        cb null
+
+    process-css-file: (t, cb) ~>
+        console.log "process-css-file: #{t.to-string!} parsing file"
+        tasks = 
+            * (cb) ~> @read-resolved t, cb
+            * (body, cb) ~> @parse-css-buffer t, body, cb
+            * (body, cb) ~> @save-buffer-to-disk t, body, cb
+        async.waterfall tasks, cb
+
+    process-file: (t, cb) ~>
+        console.log "process-file #{t.to-string!}"
+        switch t.tag
+            | 'anchor' => t.save-filename!; cb null
+            | otherwise => @save-url-to-disk t, cb
+
+    process-task-lists: ($, file-tasks, css-tasks, cb) ->
+        console.log "process-task-lists: processing #{file-tasks.length} file tasks and #{css-tasks.length} CSS tasks"
+        tasks =
+            * (cb) ~> async.each file-tasks, @process-file, cb
+            * (cb) ~> async.each css-tasks, @process-css-file, cb
+        async.waterfall tasks, (err) -> cb err, $
+
+    read-resolved: (t, cb) ->
+        return cb null, null unless t.resolved?
+        console.log "read-resolved: #{t.to-string!}"
+        @request t.resolved, (err, resp, body) ~>
+            return cb err if err?
+            t.statusCode = resp.statusCode
+            t.contentType = resp.headers['content-type']
+            # Ignore HTTP errors
+            return cb null, body if t.statusCode == 200
+            console.log 'read-resolved: #{t.statusCode} on read from #{t.resolved}'
+            return cb null, null
+      
     run: (cb) ->
         u = @u
         tasks =
-            * (cb) ~>@request u, cb
+            * (cb) ~> @request u, cb
             * (resp, body, cb) ~> cb null, cheerio.load body.toString 'utf-8'
             * ($, cb) ~> @load-task-lists $, cb
-            * ($, files, css-tasks, cb) ~> 
-                file-tasks =
-                    * (cb) ~> async.each files, @process-file, cb
-                    * (cb) ~> async.each css-tasks, @process-css, cb
-                async.waterfall file-tasks, (err) -> cb err, $, css-tasks
-            * ($, css-tasks, cb) ~> @process-css-tasks css-tasks, (err) -> cb err, $
+            * ($, file-tasks, css-tasks, cb) ~> @process-task-lists $, file-tasks, css-tasks, cb
             * ($, cb) ~> @save-html-to-disk $, cb
         async.waterfall tasks, cb
 
@@ -178,20 +165,20 @@ class Extractenator9000
             * (cb) ~> t.save-filename!; cb null
         async.waterfall tasks, (err) ->
             console.log "save-buffer-to-disk: err", err if err?
-            # console.log "save-buffer-to-disk: #{t.to-string!} saved as #{t.content-type} file #{t.filename}"
+            console.log "save-buffer-to-disk: #{t.to-string!} saved as #{t.content-type} file #{t.filename}"
             cb null
 
     save-html-to-disk: ($, cb) ->
         task = new HtmlTask @u, '', '', ''
-        console.log "save-html-to-disk, task #{task.to-string!}"
+        # console.log "save-html-to-disk, task #{task.to-string!}"
         @save-buffer-to-disk task, $.html!, cb
 
     save-url-to-disk: (t, cb) ->
-        console.log "save-url-to-disk: #{t.to-string!} is on a CDN" if @is-cdn t
+        # console.log "save-url-to-disk: #{t.to-string!} is on a CDN" if @is-cdn t
         return cb null if @is-cdn t 
         return cb null unless /^http/.test t.resolved
         return cb null unless t.resolved.slice(-1) != '/'
-        console.log "save-url-to-disk: saving #{t.to-string!} to disk"
+        # console.log "save-url-to-disk: saving #{t.to-string!} to disk"
         tasks = 
             * (cb) ~> @read-resolved t, cb
             * (body, cb) ~> @save-buffer-to-disk t, body, cb
@@ -200,6 +187,8 @@ class Extractenator9000
 txdisabled = 'http://txdisabilities.org/'
 reddit = "https://reddit.com/r/pics"
 stanthonysf = 'https://www.stanthonysf.org/myaccount/'
-new Extractenator9000 txdisabled, dir: 'o' .run (err) ->
-    console.log err if err?
+u = txdisabled
+
+new Extractenator9000 u, dir: 'o' .run (err) ->
+    console.log "Extractenator9000: err", err, "on", u if err?
     process.exit 0
