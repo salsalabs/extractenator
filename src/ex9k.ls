@@ -4,7 +4,7 @@ require! './config'
 require! css
 fs = require 'fs-extra'
 require! path
-{each, filter, flatten, map, take-while} = require 'prelude-ls'
+{each, filter, flatten, map, reject, take-while} = require 'prelude-ls'
 require! request
 require! url
 
@@ -69,13 +69,15 @@ class Extractenator9000
     has-url: (x) -> /url/.test x.value
 
     is-cdn: (t) ->
+        # console.log "is-cdn: #{t.to-string!}"
+        return false unless t.original?
         url.parse t.original .hostname in config.CDN_HOSTS
 
     load-task-lists: ($, cb) ->
         u = @u
         file-tasks = []
         css-tasks = [] 
-        $ 'link[href*=css]' .each ->
+        $ 'link[href*=css]' .each ~>
             t = new FileTask u, $(this), 'css', 'href'
             file-tasks.push t
             css-tasks.push t
@@ -83,7 +85,8 @@ class Extractenator9000
         # $ 'style[type*=css]' .each -> queue.push new FileTask u, $(this), 'css-embedded', '' ->
         $ 'img:not([src^=data])' .each -> file-tasks.push new FileTask u, $(this), 'img', 'src'
         $ 'a' .each -> file-tasks.push new FileTask u, $(this), 'anchor', 'href'
-        cb null, $, file-tasks, css-tasks
+        
+        cb null, $, (reject @is-cdn, file-tasks) , (reject @is-cdn, css-tasks)
  
     parse-css-buffer: (t, body, cb) ->
         console.log "parse-css-buffer: #{t.to-string!}, body has #{body?.length} bytes"
@@ -112,7 +115,8 @@ class Extractenator9000
         cb null
 
     process-css-file: (t, cb) ~>
-        console.log "process-css-file: #{t.to-string!} parsing file"
+        # console.log "process-css-file:" t
+        return cb null unless t.resolved?
         tasks = 
             * (cb) ~> @read-resolved t, cb
             * (body, cb) ~> @parse-css-buffer t, body, cb
@@ -120,7 +124,7 @@ class Extractenator9000
         async.waterfall tasks, cb
 
     process-file: (t, cb) ~>
-        console.log "process-file #{t.to-string!}"
+        # console.log "process-file #{t.to-string!}"
         switch t.tag
             | 'anchor' => t.save-filename!; cb null
             | otherwise => @save-url-to-disk t, cb
@@ -165,7 +169,7 @@ class Extractenator9000
             * (cb) ~> t.save-filename!; cb null
         async.waterfall tasks, (err) ->
             console.log "save-buffer-to-disk: err", err if err?
-            console.log "save-buffer-to-disk: #{t.to-string!} saved as #{t.content-type} file #{t.filename}"
+            # console.log "save-buffer-to-disk: #{t.to-string!} saved as #{t.content-type} file #{t.filename}"
             cb null
 
     save-html-to-disk: ($, cb) ->
