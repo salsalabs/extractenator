@@ -1,6 +1,7 @@
 export CDN_HOSTS =
     'ajax.googleapis.com'
     'fonts.gstatic.com'
+    'fonts.googleapis.com'
     'code.jquery.com'
     'maxcdn.bootstrapcdn.com'
     'cdnjs.cloudflare.com'

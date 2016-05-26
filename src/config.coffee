@@ -1,5 +1,6 @@
 module.exports = 
     CDN_HOSTS:   [ 'ajax.googleapis.com',
+        'fonts.googleapis.com',
         'fonts.gstatic.com',
         'code.jquery.com',
         'maxcdn.bootstrapcdn.com',
