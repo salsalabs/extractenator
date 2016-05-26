@@ -75,7 +75,7 @@ class Extractenator9000
             or t.resolved.slice(-1) == '/'
             or url.parse t.original .hostname in config.CDN_HOSTS
 
-    load-task-lists: ($, cb) ->
+    load-task-lists: ($) ->
         u = @u
         file-tasks = []
         css-tasks = [] 
@@ -84,8 +84,8 @@ class Extractenator9000
         $ 'script[src*=js]' .each -> file-tasks.push new FileTask u, $(this), 'script', 'src'
         # $ 'style[type*=css]' .each -> queue.push new FileTask u, $(this), 'css-embedded', '' ->
         $ 'img:not([src^=data])' .each -> file-tasks.push new FileTask u, $(this), 'img', 'src'
-        $ 'link[rel=stylesheet]' .each -> css-tasks.push t = new FileTask u, $(this), 'css', 'href'
-        cb null, $, (reject @not-useful, file-tasks), (reject @not-useful, css-tasks)
+        $ 'link[rel=stylesheet]' .each -> css-tasks.push new FileTask u, $(this), 'css', 'href'
+        file-tasks: (reject @not-useful, file-tasks), css-tasks: (reject @not-useful, css-tasks)
  
     parse-css-buffer: (t, body, cb) ->
         console.log "parse-css-buffer: #{t.to-string!}, body has #{body?.length} bytes"
@@ -126,14 +126,13 @@ class Extractenator9000
         console.log "process-file-task #{t.to-string!}"
         switch t.tag
             | 'anchor' => t.save-filename!; cb null
-            | otherwise => @save-url-to-disk t, (err) -> cb null
+            | otherwise => @save-url-to-disk t, cb
 
-    process-task-lists: ($, file-tasks, css-tasks, cb) ->
+    process-task-lists: (file-tasks, css-tasks, cb) ->
         console.log "process-task-lists: processing #{file-tasks.length} file tasks and #{css-tasks.length} CSS tasks"
-        tasks =
-            * (cb) ~> async.each css-tasks, @process-css-task,  cb
-            * (cb) ~> async.each file-tasks, @process-file-task, cb
-        async.waterfall tasks, cb
+        err <- async.each css-tasks, @process-css-task
+        return cb err if err?
+        async.each file-tasks, @process-file-task, cb
 
     read-resolved: (t, cb) ->
         return cb null, null unless t.resolved?
@@ -149,13 +148,15 @@ class Extractenator9000
       
     run: (cb) ->
         u = @u
-        tasks =
-            * (cb) ~> @request u, cb
-            * (resp, body, cb) ~> cb null, cheerio.load body.toString 'utf-8'
-            * ($, cb) ~> @load-task-lists $, cb
-            * ($, file-tasks, css-tasks, cb) ~> @process-task-lists $, file-tasks, css-tasks, cb
-            * ($, cb) ~> @save-html-to-disk $, cb
-        async.waterfall tasks, cb
+        (err, resp, body, cb) <~ @request u
+        return cb err if err?
+        $ = cheerio.load body.toString 'utf-8'
+        task-lists = @load-task-lists $
+        console.log "run: task-lists returned #{task-lists.file-tasks.length} file tasks and #{task-lists.css-tasks.length} CSS tasks"
+        err <- @process-task-lists task-lists.file-tasks, task-lists.css-tasks
+        return cb err if err?
+        err <- @save-html-to-disk $
+        cb err
 
     save-buffer-to-disk: (t, body, cb) ->
         # console.log "save-buffer-to-disk: #{t.to-string!}"
@@ -178,10 +179,10 @@ class Extractenator9000
 
     save-url-to-disk: (t, cb) ->
         # console.log "save-url-to-disk: saving #{t.to-string!} to disk"
-        tasks = 
-            * (cb) ~> @read-resolved t, cb
-            * (body, cb) ~> @save-buffer-to-disk t, body, cb
-        async.waterfall tasks, cb
+        err, body <- @read-resolved t
+        return cb err if err?
+        err <- @save-buffer-to-disk t, body
+        cb err
 
 txdisabled = 'http://txdisabilities.org/'
 reddit = "https://reddit.com/r/pics"
