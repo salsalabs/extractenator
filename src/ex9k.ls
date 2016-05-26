@@ -153,7 +153,10 @@ class Extractenator9000
         $ = cheerio.load body.toString 'utf-8'
         task-lists = @load-task-lists $
         console.log "run: task-lists returned #{task-lists.file-tasks.length} file tasks and #{task-lists.css-tasks.length} CSS tasks"
-        err <- @process-task-lists task-lists.file-tasks, task-lists.css-tasks
+        # err <- @process-task-lists task-lists.file-tasks, task-lists.css-tasks
+        err <- async.each css-tasks, @process-css-task
+        return cb err if err?
+        err <- async.each file-tasks, @process-file-task
         return cb err if err?
         err <- @save-html-to-disk $
         cb err
