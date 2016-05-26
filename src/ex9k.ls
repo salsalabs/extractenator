@@ -45,7 +45,7 @@ class Task
     set-html: (body) ->@elem.html body
 
 class FileTask extends Task
-    get-original: -> @original = @elem.attr @attr; console.log "fileTask: #{@tag} #{@attr} original #{@original}"
+    get-original: -> @original = @elem.attr @attr
     save-filename: -> @elem.attr @attr, "/#{@filename or @resolved}"
 
 class HtmlTask extends Task
@@ -68,23 +68,24 @@ class Extractenator9000
 
     has-url: (x) -> /url/.test x.value
 
-    is-cdn: (t) ->
-        # console.log "is-cdn: #{t.to-string!}"
-        return false unless t.original?
-        url.parse t.original .hostname in config.CDN_HOSTS
+    not-useful: (t) ->
+        return not t.original?
+            or not t.resolved?
+            or not /^http/.test t.resolved
+            or t.resolved.slice(-1) == '/'
+            or url.parse t.original .hostname in config.CDN_HOSTS
 
     load-task-lists: ($, cb) ->
         u = @u
         file-tasks = []
         css-tasks = [] 
-        $ 'link[rel=stylesheet]' .each -> file-tasks.push t = new FileTask u, $(this), 'css', 'href'
-        $ 'link[rel=stylesheet]' .each -> css-tasks.push t = new FileTask u, $(this), 'css', 'href'
+        $ 'a' .each -> file-tasks.push new FileTask u, $(this), 'anchor', 'href'
+        # $ 'link[rel=stylesheet]' .each -> file-tasks.push t = new FileTask u, $(this), 'css', 'href'
         $ 'script[src*=js]' .each -> file-tasks.push new FileTask u, $(this), 'script', 'src'
         # $ 'style[type*=css]' .each -> queue.push new FileTask u, $(this), 'css-embedded', '' ->
         $ 'img:not([src^=data])' .each -> file-tasks.push new FileTask u, $(this), 'img', 'src'
-        $ 'a' .each -> file-tasks.push new FileTask u, $(this), 'anchor', 'href'
-        
-        cb null, $, (reject @is-cdn, file-tasks), (reject @is-cdn, css-tasks)
+        $ 'link[rel=stylesheet]' .each -> css-tasks.push t = new FileTask u, $(this), 'css', 'href'
+        cb null, $, (reject @not-useful, file-tasks), (reject @not-useful, css-tasks)
  
     parse-css-buffer: (t, body, cb) ->
         console.log "parse-css-buffer: #{t.to-string!}, body has #{body?.length} bytes"
@@ -98,7 +99,7 @@ class Extractenator9000
             |> filter @has-url
         tasks = 
             * (cb) ~> async.each decls, @process-decl, cb
-            * (cb) ~> css.stringify obj; cb null
+            * (cb) ~> cb null, css.stringify obj
         async.waterfall tasks, cb
 
     parse-embedded-css: (t, cb) ->
@@ -108,12 +109,8 @@ class Extractenator9000
             * (body, cb) ~> t.set-html body, cb
         async.waterfall tasks, cb
 
-    process-decl: (decl, cb) ->
-        console.log "process-decl: decl", decl
-        cb null
-
-    process-css-file: (t, cb) ~>
-        # console.log "process-css-file:" t
+    process-css-task: (t, cb) ~>
+        console.log "process-css-task: #{t.to-string!} has resolved #{t.resolved}"
         return cb null unless t.resolved?
         tasks = 
             * (cb) ~> @read-resolved t, cb
@@ -121,29 +118,33 @@ class Extractenator9000
             * (body, cb) ~> @save-buffer-to-disk t, body, cb
         async.waterfall tasks, cb
 
-    process-file: (t, cb) ~>
-        # console.log "process-file #{t.to-string!}"
+    process-decl: (decl, cb) ->
+        console.log "process-decl: decl", decl
+        cb null
+        
+    process-file-task: (t, cb) ~>
+        console.log "process-file-task #{t.to-string!}"
         switch t.tag
             | 'anchor' => t.save-filename!; cb null
-            | otherwise => @save-url-to-disk t, cb
+            | otherwise => @save-url-to-disk t, (err) -> cb null
 
     process-task-lists: ($, file-tasks, css-tasks, cb) ->
         console.log "process-task-lists: processing #{file-tasks.length} file tasks and #{css-tasks.length} CSS tasks"
         tasks =
-            * (cb) ~> async.each file-tasks, @process-file, cb
-            * (cb) ~> async.each css-tasks, @process-css-file, cb
-        async.waterfall tasks, (err) -> cb err, $
+            * (cb) ~> async.each css-tasks, @process-css-task,  cb
+            * (cb) ~> async.each file-tasks, @process-file-task, cb
+        async.waterfall tasks, cb
 
     read-resolved: (t, cb) ->
         return cb null, null unless t.resolved?
-        console.log "read-resolved: #{t.to-string!}"
+        # console.log "read-resolved: #{t.to-string!}"
         @request t.resolved, (err, resp, body) ~>
             return cb err if err?
             t.statusCode = resp.statusCode
             t.contentType = resp.headers['content-type']
             # Ignore HTTP errors
             return cb null, body if t.statusCode == 200
-            console.log 'read-resolved: #{t.statusCode} on read from #{t.resolved}'
+            # console.log "read-resolved: #{t.statusCode} on read from #{t.resolved}"
             return cb null, null
       
     run: (cb) ->
@@ -176,10 +177,6 @@ class Extractenator9000
         @save-buffer-to-disk task, $.html!, cb
 
     save-url-to-disk: (t, cb) ->
-        # console.log "save-url-to-disk: #{t.to-string!} is on a CDN" if @is-cdn t
-        return cb null if @is-cdn t 
-        return cb null unless /^http/.test t.resolved
-        return cb null unless t.resolved.slice(-1) != '/'
         # console.log "save-url-to-disk: saving #{t.to-string!} to disk"
         tasks = 
             * (cb) ~> @read-resolved t, cb
@@ -189,8 +186,8 @@ class Extractenator9000
 txdisabled = 'http://txdisabilities.org/'
 reddit = "https://reddit.com/r/pics"
 stanthonysf = 'https://www.stanthonysf.org/myaccount/'
-u = txdisabled
 
+u = txdisabled
 new Extractenator9000 u, dir: 'o' .run (err) ->
     console.log "Extractenator9000: err", err, "on", u if err?
     process.exit 0
