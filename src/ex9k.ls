@@ -45,7 +45,7 @@ class Task
     set-html: (body) ->@elem.html body
 
 class FileTask extends Task
-    get-original: -> @original = @elem.attr @attr
+    get-original: -> @original = @elem.attr @attr; console.log "fileTask: #{@tag} #{@attr} original #{@original}"
     save-filename: -> @elem.attr @attr, "/#{@filename or @resolved}"
 
 class HtmlTask extends Task
@@ -77,16 +77,14 @@ class Extractenator9000
         u = @u
         file-tasks = []
         css-tasks = [] 
-        $ 'link[href*=css]' .each ~>
-            t = new FileTask u, $(this), 'css', 'href'
-            file-tasks.push t
-            css-tasks.push t
+        $ 'link[rel=stylesheet]' .each -> file-tasks.push t = new FileTask u, $(this), 'css', 'href'
+        $ 'link[rel=stylesheet]' .each -> css-tasks.push t = new FileTask u, $(this), 'css', 'href'
         $ 'script[src*=js]' .each -> file-tasks.push new FileTask u, $(this), 'script', 'src'
         # $ 'style[type*=css]' .each -> queue.push new FileTask u, $(this), 'css-embedded', '' ->
         $ 'img:not([src^=data])' .each -> file-tasks.push new FileTask u, $(this), 'img', 'src'
         $ 'a' .each -> file-tasks.push new FileTask u, $(this), 'anchor', 'href'
         
-        cb null, $, (reject @is-cdn, file-tasks) , (reject @is-cdn, css-tasks)
+        cb null, $, (reject @is-cdn, file-tasks), (reject @is-cdn, css-tasks)
  
     parse-css-buffer: (t, body, cb) ->
         console.log "parse-css-buffer: #{t.to-string!}, body has #{body?.length} bytes"
