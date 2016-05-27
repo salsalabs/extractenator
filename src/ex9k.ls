@@ -44,6 +44,18 @@ class Task
 
     set-html: (body) ->@elem.html body
 
+class CssTask extends Task
+    get-original: ->
+        @original = @elem.value
+        pattern = //
+            ^(.+url\(['"]*)    # left
+            (.+)                # middle -- URL of interest
+            (['"]*\))           # right
+            //
+        @parts = pattern.exec @original
+        console.log "${@to-string!} parts are #{parts}"
+    save-filename: -> @elem.value = "/#{@filename or @resolved}"
+
 class FileTask extends Task
     get-original: -> @original = @elem.attr @attr
     save-filename: -> @elem.attr @attr, "/#{@filename or @resolved}"
