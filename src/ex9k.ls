@@ -95,22 +95,15 @@ class Extractenator9000
         console.log "parse-css-buffer: #{t.to-string!}, stylesheet has rules? #{obj.stylesheet.rules?}"
         return cb null unless obj.stylesheet.rules?
         console.log "parse-css-buffer: #{t.to-string!}, stylesheet has #{obj.stylesheet.rules.length} rules"
-        # rules = filter (.declarations? and it.declarations.length > 0), obj.stylesheet.rules
-        # console.log "parse-css-buffer: #{t.to-string!}, found #{rules.length} rules in the stylesheet"
-        # decls = map (.declarations), rules
-        # console.log "parse-css-buffer: #{t.to-string!}, found #{decls.length} declarations in #{rules.length} rules"
-        # decls2 = flatten decls
-        # console.log "parse-css-buffer: #{t.to-string!}, flattend #{decls2.length} decls"
-        # decls3 = filter @has-url, decls2
-        # console.log "parse-css-buffer #{t.to-string!}, #{decls3.length} decls have a URL"
         decls = obj.stylesheet.rules
             |> map (.declarations)
             |> flatten
             |> compact
             |> filter @has-url
         console.log "parse-css-buffer: #{t.to-string!}, rules have #{decls.length} url declarations"
+        err <- async.each decls, @process-decl
+        return cb err if err?
         cb null, body
-        # err <- async.each decls, @process-decl
         # console.log "parse-css-buffer: #{t.to-string!}, process-decl returned err #{err}"
         # return cb err if err?
         # if t.resolved .indexOf \home != -1
@@ -136,7 +129,7 @@ class Extractenator9000
         @save-buffer-to-disk t, body, cb
 
     process-decl: (decl, cb) ->
-        console.log "process-decl: decl", decl
+        console.log "process-decl: decl '#{decl.value}' from '#{decl.position.source}'"
         cb null
         
     process-file-task: (t, cb) ~>
