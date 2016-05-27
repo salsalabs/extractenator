@@ -138,42 +138,43 @@ class Extractenator9000
         return cb null, null
       
     run: (cb) ->
-        (err, resp, body) <~ @request @u
+        # u = @u
+        err, resp, body <~ @request @u
         return cb err if err?
         $ = cheerio.load body.toString 'utf-8'
         task-lists = @load-task-lists $
         console.log "run: task-lists returned #{task-lists.file-tasks.length} file tasks and #{task-lists.css-tasks.length} CSS tasks"
         err <~ async.each task-lists.css-tasks, @process-css-task
-        return cb if err?
+        return cb err if err?
         err <~ async.each task-lists.file-tasks, @process-file-task
-        return cb if err?
+        return cb err if err?
         @save-html-to-disk $, cb
 
     save-buffer-to-disk: (t, body, cb) ~>
-        # console.log "save-buffer-to-disk: #{t.to-string!}"
+        console.log "save-buffer-to-disk: #{t.to-string!}"
         t.get-filename @opts.dir
         target-dir = path.dirname t.filename
-        try
-            stats = fs.statSync target-dir
-            return cb null if stats?
-        catch e
-
         err <~ fs.mkdirs target-dir
+        console.log "save-buffer-to-disk: fs.mkdirs returned err", err
         cb null if err?
 
+        console.log "save-buffer-to-disk: #{t.to-string!} saving #{body.length} bytes to #{t.filename}", err
         err <~ fs.writeFile t.filename, body, encoding: null
+        console.log "save-buffer-to-disk: fs.writeFile #{t.filename} returned err", err
         return cb err if err?
+        console.log "save-buffer-to-disk: #{t.to-string!} saved #{body.length} bytes to #{t.filename}"
         t.save-filename!
+        console.log "save-buffer-to-disk: #{t.to-string!} called t.save-filename! with #{t.filename}"
         cb null
 
     save-html-to-disk: ($, cb) ~>
-        # console.log "save-html-to-disk 1: cb ", cb
         task = new HtmlTask @u, '', '', ''
+        console.log "save-html-to-disk, task #{task.to-string!}"
         @save-buffer-to-disk task, $.html!, cb
 
     save-url-to-disk: (t, cb) ~>
         # console.log "save-url-to-disk: saving #{t.to-string!} to disk"
-        (err, body) <~ @read-resolved t
+        err, body <~ @read-resolved t
         return cb err if err?
         err <~ @save-buffer-to-disk t, body
         cb err
