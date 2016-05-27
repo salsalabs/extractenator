@@ -97,26 +97,24 @@ class Extractenator9000
             |> map (.declarations)
             |> flatten
             |> filter @has-url
-        tasks = 
-            * (cb) ~> async.each decls, @process-decl, cb
-            * (cb) ~> cb null, css.stringify obj
-        async.waterfall tasks, cb
+        err <- async.each decls, @process-decl
+        return cb err if err?
+        cb null, css.stringify obj
 
     parse-embedded-css: (t, cb) ->
         # console.log "parse-embedded-css: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS"
-        tasks = 
-            * (cb) ~>@parse-css-buffer t, t.get-html!, cb
-            * (body, cb) ~> t.set-html body, cb
-        async.waterfall tasks, cb
+        (err, body) <- @parse-css-buffer t, t.get-html!
+        return cb err if err?
+        t.set-html body, cb
 
     process-css-task: (t, cb) ~>
         console.log "process-css-task: #{t.to-string!} has resolved #{t.resolved}"
         return cb null unless t.resolved?
-        tasks = 
-            * (cb) ~> @read-resolved t, cb
-            * (body, cb) ~> @parse-css-buffer t, body, cb
-            * (body, cb) ~> @save-buffer-to-disk t, body, cb
-        async.waterfall tasks, cb
+        (err, body) <~ @read-resolved t
+        return cb err if err?
+        (err, body) <~ @parse-css-buffer t, body
+        return cb err if err?
+        @save-buffer-to-disk t, body, cb
 
     process-decl: (decl, cb) ->
         console.log "process-decl: decl", decl
@@ -128,63 +126,56 @@ class Extractenator9000
             | 'anchor' => t.save-filename!; cb null
             | otherwise => @save-url-to-disk t, cb
 
-    process-task-lists: (file-tasks, css-tasks, cb) ->
-        console.log "process-task-lists: processing #{file-tasks.length} file tasks and #{css-tasks.length} CSS tasks"
-        err <- async.each css-tasks, @process-css-task
-        return cb err if err?
-        async.each file-tasks, @process-file-task, cb
-
-    read-resolved: (t, cb) ->
+    read-resolved: (t, cb) ~>
         return cb null, null unless t.resolved?
         # console.log "read-resolved: #{t.to-string!}"
-        @request t.resolved, (err, resp, body) ~>
-            return cb err if err?
-            t.statusCode = resp.statusCode
-            t.contentType = resp.headers['content-type']
-            # Ignore HTTP errors
-            return cb null, body if t.statusCode == 200
-            # console.log "read-resolved: #{t.statusCode} on read from #{t.resolved}"
-            return cb null, null
+        (err, resp, body) <- @request t.resolved
+        return cb err if err?
+        t.statusCode = resp.statusCode
+        t.contentType = resp.headers['content-type']
+        return cb null, body if t.statusCode == 200
+        console.log "read-resolved: #{t.statusCode} on read from #{t.resolved}"
+        return cb null, null
       
     run: (cb) ->
-        u = @u
-        (err, resp, body, cb) <~ @request u
+        (err, resp, body) <~ @request @u
         return cb err if err?
         $ = cheerio.load body.toString 'utf-8'
         task-lists = @load-task-lists $
         console.log "run: task-lists returned #{task-lists.file-tasks.length} file tasks and #{task-lists.css-tasks.length} CSS tasks"
-        # err <- @process-task-lists task-lists.file-tasks, task-lists.css-tasks
-        err <- async.each css-tasks, @process-css-task
-        return cb err if err?
-        err <- async.each file-tasks, @process-file-task
-        return cb err if err?
-        err <- @save-html-to-disk $
-        cb err
+        err <~ async.each task-lists.css-tasks, @process-css-task
+        return cb if err?
+        err <~ async.each task-lists.file-tasks, @process-file-task
+        return cb if err?
+        @save-html-to-disk $, cb
 
-    save-buffer-to-disk: (t, body, cb) ->
+    save-buffer-to-disk: (t, body, cb) ~>
         # console.log "save-buffer-to-disk: #{t.to-string!}"
         t.get-filename @opts.dir
         target-dir = path.dirname t.filename
-        tasks = 
-            * (cb) ~> fs.stat target-dir, (err, stats) -> cb null, stats
-            * (stats, cb) ~> return cb null if stats?; fs.mkdirs target-dir, cb
-            * (cb) ~> fs.writeFile t.filename, body, encoding: null, cb
-            * (cb) ~> t.save-filename!; cb null
-        async.waterfall tasks, (err) ->
-            console.log "save-buffer-to-disk: err", err if err?
-            # console.log "save-buffer-to-disk: #{t.to-string!} saved as #{t.content-type} file #{t.filename}"
-            cb null
+        try
+            stats = fs.statSync target-dir
+            return cb null if stats?
+        catch e
 
-    save-html-to-disk: ($, cb) ->
+        err <~ fs.mkdirs target-dir
+        cb null if err?
+
+        err <~ fs.writeFile t.filename, body, encoding: null
+        return cb err if err?
+        t.save-filename!
+        cb null
+
+    save-html-to-disk: ($, cb) ~>
+        # console.log "save-html-to-disk 1: cb ", cb
         task = new HtmlTask @u, '', '', ''
-        # console.log "save-html-to-disk, task #{task.to-string!}"
         @save-buffer-to-disk task, $.html!, cb
 
-    save-url-to-disk: (t, cb) ->
+    save-url-to-disk: (t, cb) ~>
         # console.log "save-url-to-disk: saving #{t.to-string!} to disk"
-        err, body <- @read-resolved t
+        (err, body) <~ @read-resolved t
         return cb err if err?
-        err <- @save-buffer-to-disk t, body
+        err <~ @save-buffer-to-disk t, body
         cb err
 
 txdisabled = 'http://txdisabilities.org/'
