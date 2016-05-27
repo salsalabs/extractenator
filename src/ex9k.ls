@@ -4,7 +4,7 @@ require! './config'
 require! css
 fs = require 'fs-extra'
 require! path
-{each, filter, flatten, map, reject, take-while} = require 'prelude-ls'
+{compact, each, filter, flatten, map, reject, take-while} = require 'prelude-ls'
 require! request
 require! url
 
@@ -80,7 +80,6 @@ class Extractenator9000
         file-tasks = []
         css-tasks = [] 
         $ 'a' .each -> file-tasks.push new FileTask u, $(this), 'anchor', 'href'
-        # $ 'link[rel=stylesheet]' .each -> file-tasks.push t = new FileTask u, $(this), 'css', 'href'
         $ 'script[src*=js]' .each -> file-tasks.push new FileTask u, $(this), 'script', 'src'
         # $ 'style[type*=css]' .each -> queue.push new FileTask u, $(this), 'css-embedded', '' ->
         $ 'img:not([src^=data])' .each -> file-tasks.push new FileTask u, $(this), 'img', 'src'
@@ -88,18 +87,36 @@ class Extractenator9000
         file-tasks: (reject @not-useful, file-tasks), css-tasks: (reject @not-useful, css-tasks)
  
     parse-css-buffer: (t, body, cb) ->
-        console.log "parse-css-buffer: #{t.to-string!}, body has #{body?.length} bytes"
+        # console.log "parse-css-buffer: #{t.to-string!}, body has #{body?.length} bytes"
         return cb null unless body?
         obj = css.parse body.toString!, silent: true, source: t.referer
+        # console.log "parse-css-buffer: #{t.to-string!}, object has stylesheet? #{obj.stylesheet?}"
         return cb null unless obj.stylesheet?
+        console.log "parse-css-buffer: #{t.to-string!}, stylesheet has rules? #{obj.stylesheet.rules?}"
         return cb null unless obj.stylesheet.rules?
-        decls = take-while (.declarations?.length > 0), obj.stylesheet.rules
+        console.log "parse-css-buffer: #{t.to-string!}, stylesheet has #{obj.stylesheet.rules.length} rules"
+        # rules = filter (.declarations? and it.declarations.length > 0), obj.stylesheet.rules
+        # console.log "parse-css-buffer: #{t.to-string!}, found #{rules.length} rules in the stylesheet"
+        # decls = map (.declarations), rules
+        # console.log "parse-css-buffer: #{t.to-string!}, found #{decls.length} declarations in #{rules.length} rules"
+        # decls2 = flatten decls
+        # console.log "parse-css-buffer: #{t.to-string!}, flattend #{decls2.length} decls"
+        # decls3 = filter @has-url, decls2
+        # console.log "parse-css-buffer #{t.to-string!}, #{decls3.length} decls have a URL"
+        decls = obj.stylesheet.rules
             |> map (.declarations)
             |> flatten
+            |> compact
             |> filter @has-url
-        err <- async.each decls, @process-decl
-        return cb err if err?
-        cb null, css.stringify obj
+        console.log "parse-css-buffer: #{t.to-string!}, rules have #{decls.length} url declarations"
+        cb null, body
+        # err <- async.each decls, @process-decl
+        # console.log "parse-css-buffer: #{t.to-string!}, process-decl returned err #{err}"
+        # return cb err if err?
+        # if t.resolved .indexOf \home != -1
+        #     # console.log JSON.stringify obj
+        #     process.exit 0
+        # cb null, css.stringify obj
 
     parse-embedded-css: (t, cb) ->
         # console.log "parse-embedded-css: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS"
@@ -108,11 +125,13 @@ class Extractenator9000
         t.set-html body, cb
 
     process-css-task: (t, cb) ~>
-        console.log "process-css-task: #{t.to-string!} has resolved #{t.resolved}"
+        # console.log "process-css-task: #{t.to-string!} has resolved #{t.resolved}"
         return cb null unless t.resolved?
         (err, body) <~ @read-resolved t
+        # console.log "process-css-task: #{t.to-string!} read-resolved returned err #{err} and #{body.length} bytes"
         return cb err if err?
         (err, body) <~ @parse-css-buffer t, body
+        console.log "process-css-task: #{t.to-string!} parse-css-buffer returned err #{err} and #{body.length} bytes"
         return cb err if err?
         @save-buffer-to-disk t, body, cb
 
@@ -121,7 +140,7 @@ class Extractenator9000
         cb null
         
     process-file-task: (t, cb) ~>
-        console.log "process-file-task #{t.to-string!}"
+        # console.log "process-file-task #{t.to-string!}"
         switch t.tag
             | 'anchor' => t.save-filename!; cb null
             | otherwise => @save-url-to-disk t, cb
@@ -151,25 +170,20 @@ class Extractenator9000
         @save-html-to-disk $, cb
 
     save-buffer-to-disk: (t, body, cb) ~>
-        console.log "save-buffer-to-disk: #{t.to-string!}"
+        # console.log "save-buffer-to-disk: #{t.to-string!}"
         t.get-filename @opts.dir
         target-dir = path.dirname t.filename
         err <~ fs.mkdirs target-dir
-        console.log "save-buffer-to-disk: fs.mkdirs returned err", err
         cb null if err?
 
-        console.log "save-buffer-to-disk: #{t.to-string!} saving #{body.length} bytes to #{t.filename}", err
         err <~ fs.writeFile t.filename, body, encoding: null
-        console.log "save-buffer-to-disk: fs.writeFile #{t.filename} returned err", err
         return cb err if err?
-        console.log "save-buffer-to-disk: #{t.to-string!} saved #{body.length} bytes to #{t.filename}"
         t.save-filename!
-        console.log "save-buffer-to-disk: #{t.to-string!} called t.save-filename! with #{t.filename}"
         cb null
 
     save-html-to-disk: ($, cb) ~>
         task = new HtmlTask @u, '', '', ''
-        console.log "save-html-to-disk, task #{task.to-string!}"
+        # console.log "save-html-to-disk, task #{task.to-string!}"
         @save-buffer-to-disk task, $.html!, cb
 
     save-url-to-disk: (t, cb) ~>
