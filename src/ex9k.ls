@@ -45,9 +45,6 @@ class Task
             'Referer': app.uri
             'User-Agent': config.USER_AGENT
 
-    to-string: ->
-        "#{@serial-number} #{@referer} #{@tag} #{@attr} #{@resolved}"
-
     get-directory: ->
         | /image\//.test @content-type => \image
         | /css/.test @content-type => \css
@@ -92,18 +89,20 @@ class Task
 
     set-html: (body) ->@elem.html body
 
+    to-string: ->
+        "#{@serial-number} #{@referer} #{@tag} #{@attr} #{@resolved}"
+
 class CssTask extends Task
     get-original: ->
         @original = @elem.value
-        console.log "CssTask: @original is #{@original}"
-        pattern = //
-            ^(.+url\(['"]*)    # left
-            (.+)                # middle -- URL of interest
-            (['"]*\))           # right
-            //
+        pattern = /^(.*url\(['"]*)(.+?)(['"]*\).*)/
         @parts = pattern.exec @original
-        console.log "#{@to-string!} parts are #{@parts}"
-    store-filename: -> @elem.value = "/#{@filename or @resolved}"
+        console.log "CssTask.get-original: #{@to-string!} parts #{@parts}"
+
+    store-filename: ->
+        @parts[2] = "/#{@filename or @resolved}"
+        @elem.value = @parts .slice 1 .join ''
+        console.log "CssTask.store-filename: #{@to-string!} parts #{@parts}"
 
 class FileTask extends Task
     get-original: -> @original = @elem.attr @attr
@@ -157,6 +156,10 @@ class Extractenator9000
             |> flatten
             |> compact
             |> filter @has-url
+            
+        tasks = decls.map (it) -> new CssTask t.resolved, it, '', ''
+        console.log map (.to-string!) tasks
+
         console.log "process-css-buffer: #{t.to-string!}, rules have #{decls.length} url declarations"
         err <- async.each decls, @modify-declaration
         return cb err if err?
