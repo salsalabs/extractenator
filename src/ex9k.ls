@@ -139,15 +139,15 @@ class Extractenator9000
         $ 'script[src*=js]' .each -> task-list.push new FileTask app.uri, $(this), 'script', 'src'
         $ 'img:not([src^=data])' .each -> task-list.push new FileTask app.uri, $(this), 'img', 'src'
         $ 'link[rel=stylesheet]' .each -> task-list.push new FileTask app.uri, $(this), 'css', 'href'
-        $ 'style[type*=css]' .each -> task-list.push new FileTask app.uri, $(this), 'css-embedded', ''
+        $ 'style[type*=css]' .each -> task-list.push new FileTask app.uri, $(this), 'style', ''
         reject @not-useful, task-list
 
     modify-declaration: (decl, cb) ->
         console.log "modify-declaration: decl '#{decl.value}' from '#{decl.position.source}'"
         cb null
  
-    parse-css-buffer: (t, body, cb) ->
-        # console.log "parse-css-buffer: #{t.to-string!}, body has #{body?.length} bytes"
+    process-css-buffer: (t, body, cb) ->
+        # console.log "process-css-buffer: #{t.to-string!}, body has #{body?.length} bytes"
         return cb null unless body?
         obj = css.parse body.toString!, silent: true, source: t.referer
         return cb null unless obj.stylesheet?
@@ -157,10 +157,10 @@ class Extractenator9000
             |> flatten
             |> compact
             |> filter @has-url
-        console.log "parse-css-buffer: #{t.to-string!}, rules have #{decls.length} url declarations"
+        console.log "process-css-buffer: #{t.to-string!}, rules have #{decls.length} url declarations"
         err <- async.each decls, @modify-declaration
         return cb err if err?
-        # console.log "parse-css-buffer: #{t.to-string!}, modify-declaration returned err #{err}"
+        # console.log "process-css-buffer: #{t.to-string!}, modify-declaration returned err #{err}"
         # return cb err if err?
         # cb null, css.stringify obj
         cb null, body
@@ -169,21 +169,22 @@ class Extractenator9000
         # console.log "process-css-task: #{t.to-string!} has resolved #{t.resolved}"
         (err, body) <~ t.read-resolved
         return cb err if err?
-        (err, body) <~ @parse-css-buffer t, body
-        console.log "process-css-task: #{t.to-string!} parse-css-buffer returned err #{err} and #{body.length} bytes"
+        (err, body) <~ @process-css-buffer t, body
+        console.log "process-css-task: #{t.to-string!} process-css-buffer returned err #{err} and #{body.length} bytes"
         return cb err if err?
         t.save-buffer-to-disk body, cb
 
-    process-embedded-css: (t, cb) ->
+    process-style-task: (t, cb) ->
         # console.log "parse-embedded-css: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS"
-        (err, body) <- @parse-css-buffer t, t.get-html!
+        (err, body) <- @process-css-buffer t, t.get-html!
+        console.log "process-css-buffer: #{t.to-string!} process-css-buffer returned err #{err} and #{body.length} bytes"
         return cb err if err?
         t.set-html body, cb
 
     process-task-list: (t, cb) ~>
         switch t.tag
             | 'anchor' => t.store-filename!; cb null
-            | 'css-embeded' => @process-embedded-css t, cb
+            | 'style' => @process-style-task t, cb
             | 'css' => @process-css-file-task t, cb
             | otherwise => t.save-url-to-disk cb
       
