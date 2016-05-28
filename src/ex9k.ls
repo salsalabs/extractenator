@@ -21,19 +21,19 @@ class App
 app = new App()
 
 class Task
-    @serialNumber = 0
+    @serial-number = 0
     (@referer, @elem, @tag, @attr) ->
         @resolved = null
-        @serialNumber = @@serialNumber++
-        @contentType = null
-        @statusCode = null
+        @serial-number = @@serial-number++
+        @content-type = null
+        @status-code = null
         @filename = null
 
         @get-original!        
         return unless @original?
         return if @original instanceof Object
         u = url.parse @referer
-        @resolved = "#{u.protocol}#{@original}" if RegExp '^//' .test @original 
+        @resolved = "#{u.protocol}#{@original}" if RegExp '^//' .test @original
         o = url.parse @original
         @resolved = url.resolve @referer, @original unless o.protocol?
         @resolved = @original unless @resolved?
@@ -46,13 +46,13 @@ class Task
             'User-Agent': config.USER_AGENT
 
     to-string: ->
-        "#{@serialNumber} #{@referer} #{@tag} #{@attr} #{@resolved}"
+        "#{@serial-number} #{@referer} #{@tag} #{@attr} #{@resolved}"
 
     get-directory: ->
-        | /image\//.test @contentType => \image
-        | /css/.test @contentType => \css
-        | /javascript/.test @contentType => \javascript
-        | /font/.test @contentType => \font
+        | /image\//.test @content-type => \image
+        | /css/.test @content-type => \css
+        | /javascript/.test @content-type => \javascript
+        | /font/.test @content-type => \font
         | otherwise ''
 
     get-filename: (dir) ->
@@ -63,13 +63,12 @@ class Task
 
     read-resolved: (cb) ~>
         return cb null, null unless @resolved?
-        # console.log "read-resolved: #{@to-string!}"
-        (err, resp, body) <- @request @resolved
+        (err, resp, body) <~ @request @resolved
         return cb err if err?
-        @statusCode = resp.statusCode
-        @contentType = resp.headers['content-type']
-        return cb null, body if @statusCode == 200
-        console.log "read-resolved: #{@statusCode} on read from #{@resolved}"
+
+        @status-code = resp.statusCode
+        @content-type = resp.headers.'content-type'
+        return cb null, body if @status-code == 200
         return cb null, null
 
     save-buffer-to-disk: (body, cb) ~>
@@ -88,7 +87,7 @@ class Task
         # console.log "save-url-to-disk: saving #{@to-string!} to disk"
         err, body <~ @read-resolved
         return cb err if err?
-        err <~ @save-buffer-to-disk t, body
+        err <~ @save-buffer-to-disk body
         cb err
 
     set-html: (body) ->@elem.html body
@@ -113,8 +112,11 @@ class HtmlTask extends Task
     get-original: ->
         @original = @referer
         @resolved = @original
-        @resolved = path.join @original, '/', "index.html" unless path.extname @original?
-        @contentType = 'text/html'
+        u = url.parse @original
+        url.pathname = path.join @original, '/', "index.html" unless path.basename(url.pathname)?
+        @resolved = url.format u
+        @content-type = 'text/html'
+
     store-filename: ->
 
 class Extractenator9000
@@ -147,9 +149,7 @@ class Extractenator9000
         obj = css.parse body.toString!, silent: true, source: t.referer
         # console.log "parse-css-buffer: #{t.to-string!}, object has stylesheet? #{obj.stylesheet?}"
         return cb null unless obj.stylesheet?
-        console.log "parse-css-buffer: #{t.to-string!}, stylesheet has rules? #{obj.stylesheet.rules?}"
         return cb null unless obj.stylesheet.rules?
-        console.log "parse-css-buffer: #{t.to-string!}, stylesheet has #{obj.stylesheet.rules.length} rules"
         decls = obj.stylesheet.rules
             |> map (.declarations)
             |> flatten
@@ -190,11 +190,8 @@ class Extractenator9000
             | otherwise => t.save-url-to-disk cb
       
     run: (cb) ->
-        console.log "run: new HtmlTask app.uri", app.uri
         t = new HtmlTask app.uri, '', '', ''
         err, body <~ t.read-resolved
-        console.log "run: err", err
-        console.log "run: body", body
         return cb err if err?
         $ = cheerio.load body.toString 'utf-8'
         task-lists = @load-task-lists $

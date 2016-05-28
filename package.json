@@ -14,7 +14,7 @@
     "preinstall": "coffee --bare --compile --output lib src",
     "codo": "rm -rf doc; codo . --title 'The Extractenator.'",
     "local-server": "http-server",
-    "watch": "lsc -c -d -w -o libs src/*.ls &"
+    "watch": "lsc -c -d -w -o lib src/*.ls &"
   },
   "dependencies": {
     "async": "*",
