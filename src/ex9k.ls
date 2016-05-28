@@ -14,8 +14,9 @@ stanthonysf = 'https://www.stanthonysf.org/myaccount/'
 
     
 class App
-    uri: txdisabled
+    uri: stanthonysf
     dir: \o
+    root-dir: '/'
     # Always read URLs as buffers buffers.  Convert buffers to string as needed for parsing.
 
 app = new App()
@@ -47,7 +48,7 @@ class Task
 
     get-basename: ->
         basename = (path.basename @resolved .split '?')[0]
-        return 'index.html' unless basename.length > 0
+        return 'index.html' unless path.extname basename .length > 0
         basename
 
     get-directory: ->
@@ -59,8 +60,7 @@ class Task
 
     get-filename: (dir) ->
         @filename = path.join dir, @get-directory!, @get-basename!
-        console.log "get-filename: #{@to-string!} is filename #{@filename}"
-    
+
     get-html: -> @elem.html!
 
     read-resolved: (cb) ~>
@@ -105,13 +105,12 @@ class DeclTask extends Task
         @original = @parts[2]
 
     store-filename: ->
-        @parts[2] = "#{@filename or @resolved}"
+        @parts[2] = "#{app.root-dir}#{@filename or @resolved}"
         @elem.value = @parts .slice 1 .join ''
-        console.log "DeclTask.store-filename: #{@to-string!} elem.value #{@elem.value}"
 
 class FileTask extends Task
     get-original: -> @original = @elem.attr @attr
-    store-filename: -> @elem.attr @attr, "#{@filename or @resolved}"
+    store-filename: -> @elem.attr @attr, "#{app.root-dir}#{@filename or @resolved}"
 
 class HtmlTask extends Task
     get-original: ->
