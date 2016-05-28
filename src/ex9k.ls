@@ -190,8 +190,11 @@ class Extractenator9000
             | otherwise => t.save-url-to-disk cb
       
     run: (cb) ->
+        console.log "run: new HtmlTask app.uri", app.uri
         t = new HtmlTask app.uri, '', '', ''
         err, body <~ t.read-resolved
+        console.log "run: err", err
+        console.log "run: body", body
         return cb err if err?
         $ = cheerio.load body.toString 'utf-8'
         task-lists = @load-task-lists $
