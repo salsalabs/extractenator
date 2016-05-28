@@ -8,6 +8,18 @@ require! path
 require! request
 require! url
 
+txdisabled = 'http://txdisabilities.org/'
+reddit = "https://reddit.com/r/pics"
+stanthonysf = 'https://www.stanthonysf.org/myaccount/'
+
+    
+class App
+    uri: txdisabled
+    dir: \o
+    # Always read URLs as buffers buffers.  Convert buffers to string as needed for parsing.
+
+app = new App()
+
 class Task
     @serialNumber = 0
     (@referer, @elem, @tag, @attr) ->
@@ -23,13 +35,20 @@ class Task
         u = url.parse @referer
         @resolved = "#{u.protocol}#{@original}" if RegExp '^//' .test @original 
         o = url.parse @original
-        @resolved = url.resolve u, @original unless o.protocol?
+        @resolved = url.resolve @referer, @original unless o.protocol?
         @resolved = @original unless @resolved?
+
+    request: request.defaults do
+        jar: true
+        encoding: null
+        headers:
+            'Referer': app.uri
+            'User-Agent': config.USER_AGENT
 
     to-string: ->
         "#{@serialNumber} #{@referer} #{@tag} #{@attr} #{@resolved}"
 
-    get-directory:  ->
+    get-directory: ->
         | /image\//.test @contentType => \image
         | /css/.test @contentType => \css
         | /javascript/.test @contentType => \javascript
@@ -41,6 +60,36 @@ class Task
         # console.log "get-filename: #{@to-string!} is filename #{@filename}"
     
     get-html: -> @elem.html!
+
+    read-resolved: (cb) ~>
+        return cb null, null unless @resolved?
+        # console.log "read-resolved: #{@to-string!}"
+        (err, resp, body) <- @request @resolved
+        return cb err if err?
+        @statusCode = resp.statusCode
+        @contentType = resp.headers['content-type']
+        return cb null, body if @statusCode == 200
+        console.log "read-resolved: #{@statusCode} on read from #{@resolved}"
+        return cb null, null
+
+    save-buffer-to-disk: (body, cb) ~>
+        # console.log "save-buffer-to-disk: #{@to-string!}"
+        @get-filename app.dir
+        target-dir = path.dirname @filename
+        err <~ fs.mkdirs target-dir
+        cb null if err?
+
+        err <~ fs.writeFile @filename, body, encoding: null
+        return cb err if err?
+        @store-filename!
+        cb null
+
+    save-url-to-disk: (cb) ~>
+        # console.log "save-url-to-disk: saving #{@to-string!} to disk"
+        err, body <~ @read-resolved
+        return cb err if err?
+        err <~ @save-buffer-to-disk t, body
+        cb err
 
     set-html: (body) ->@elem.html body
 
@@ -54,11 +103,11 @@ class CssTask extends Task
             //
         @parts = pattern.exec @original
         console.log "${@to-string!} parts are #{parts}"
-    save-filename: -> @elem.value = "/#{@filename or @resolved}"
+    store-filename: -> @elem.value = "/#{@filename or @resolved}"
 
 class FileTask extends Task
     get-original: -> @original = @elem.attr @attr
-    save-filename: -> @elem.attr @attr, "/#{@filename or @resolved}"
+    store-filename: -> @elem.attr @attr, "/#{@filename or @resolved}"
 
 class HtmlTask extends Task
     get-original: ->
@@ -66,18 +115,9 @@ class HtmlTask extends Task
         @resolved = @original
         @resolved = path.join @original, '/', "index.html" unless path.extname @original?
         @contentType = 'text/html'
-    save-filename: ->
+    store-filename: ->
 
 class Extractenator9000
-    (@u, @opts) ->
-        # Always read URLs as buffers buffers.  Convert buffers to string as needed for parsing.
-        @request = request.defaults do
-            jar: true
-            encoding: null
-            headers:
-                'Referer': @u
-                'User-Agent': config.USER_AGENT
-
     has-url: (x) -> /url/.test x.value
 
     not-useful: (t) ->
@@ -88,15 +128,18 @@ class Extractenator9000
             or url.parse t.original .hostname in config.CDN_HOSTS
 
     load-task-lists: ($) ->
-        u = @u
         file-tasks = []
         css-tasks = [] 
-        $ 'a' .each -> file-tasks.push new FileTask u, $(this), 'anchor', 'href'
-        $ 'script[src*=js]' .each -> file-tasks.push new FileTask u, $(this), 'script', 'src'
-        # $ 'style[type*=css]' .each -> queue.push new FileTask u, $(this), 'css-embedded', '' ->
-        $ 'img:not([src^=data])' .each -> file-tasks.push new FileTask u, $(this), 'img', 'src'
-        $ 'link[rel=stylesheet]' .each -> css-tasks.push new FileTask u, $(this), 'css', 'href'
+        $ 'a' .each -> file-tasks.push new FileTask app.uri, $(this), 'anchor', 'href'
+        $ 'script[src*=js]' .each -> file-tasks.push new FileTask app.uri, $(this), 'script', 'src'
+        # $ 'style[type*=css]' .each -> queue.push new FileTask app.uri, $(this), 'css-embedded', '' ->
+        $ 'img:not([src^=data])' .each -> file-tasks.push new FileTask app.uri, $(this), 'img', 'src'
+        $ 'link[rel=stylesheet]' .each -> css-tasks.push new FileTask app.uri, $(this), 'css', 'href'
         file-tasks: (reject @not-useful, file-tasks), css-tasks: (reject @not-useful, css-tasks)
+
+    modify-declaration: (decl, cb) ->
+        console.log "modify-declaration: decl '#{decl.value}' from '#{decl.position.source}'"
+        cb null
  
     parse-css-buffer: (t, body, cb) ->
         # console.log "parse-css-buffer: #{t.to-string!}, body has #{body?.length} bytes"
@@ -113,10 +156,10 @@ class Extractenator9000
             |> compact
             |> filter @has-url
         console.log "parse-css-buffer: #{t.to-string!}, rules have #{decls.length} url declarations"
-        err <- async.each decls, @process-decl
+        err <- async.each decls, @modify-declaration
         return cb err if err?
         cb null, body
-        # console.log "parse-css-buffer: #{t.to-string!}, process-decl returned err #{err}"
+        # console.log "parse-css-buffer: #{t.to-string!}, modify-declaration returned err #{err}"
         # return cb err if err?
         # if t.resolved .indexOf \home != -1
         #     # console.log JSON.stringify obj
@@ -132,38 +175,23 @@ class Extractenator9000
     process-css-task: (t, cb) ~>
         # console.log "process-css-task: #{t.to-string!} has resolved #{t.resolved}"
         return cb null unless t.resolved?
-        (err, body) <~ @read-resolved t
+        (err, body) <~ t.read-resolved
         # console.log "process-css-task: #{t.to-string!} read-resolved returned err #{err} and #{body.length} bytes"
         return cb err if err?
         (err, body) <~ @parse-css-buffer t, body
         console.log "process-css-task: #{t.to-string!} parse-css-buffer returned err #{err} and #{body.length} bytes"
         return cb err if err?
-        @save-buffer-to-disk t, body, cb
-
-    process-decl: (decl, cb) ->
-        console.log "process-decl: decl '#{decl.value}' from '#{decl.position.source}'"
-        cb null
+        t.save-buffer-to-disk body, cb
         
     process-file-task: (t, cb) ~>
         # console.log "process-file-task #{t.to-string!}"
         switch t.tag
-            | 'anchor' => t.save-filename!; cb null
-            | otherwise => @save-url-to-disk t, cb
-
-    read-resolved: (t, cb) ~>
-        return cb null, null unless t.resolved?
-        # console.log "read-resolved: #{t.to-string!}"
-        (err, resp, body) <- @request t.resolved
-        return cb err if err?
-        t.statusCode = resp.statusCode
-        t.contentType = resp.headers['content-type']
-        return cb null, body if t.statusCode == 200
-        console.log "read-resolved: #{t.statusCode} on read from #{t.resolved}"
-        return cb null, null
+            | 'anchor' => t.store-filename!; cb null
+            | otherwise => t.save-url-to-disk cb
       
     run: (cb) ->
-        # u = @u
-        err, resp, body <~ @request @u
+        t = new HtmlTask app.uri, '', '', ''
+        err, body <~ t.read-resolved
         return cb err if err?
         $ = cheerio.load body.toString 'utf-8'
         task-lists = @load-task-lists $
@@ -172,37 +200,8 @@ class Extractenator9000
         return cb err if err?
         err <~ async.each task-lists.file-tasks, @process-file-task
         return cb err if err?
-        @save-html-to-disk $, cb
+        t.save-buffer-to-disk $.html!, cb
 
-    save-buffer-to-disk: (t, body, cb) ~>
-        # console.log "save-buffer-to-disk: #{t.to-string!}"
-        t.get-filename @opts.dir
-        target-dir = path.dirname t.filename
-        err <~ fs.mkdirs target-dir
-        cb null if err?
-
-        err <~ fs.writeFile t.filename, body, encoding: null
-        return cb err if err?
-        t.save-filename!
-        cb null
-
-    save-html-to-disk: ($, cb) ~>
-        task = new HtmlTask @u, '', '', ''
-        # console.log "save-html-to-disk, task #{task.to-string!}"
-        @save-buffer-to-disk task, $.html!, cb
-
-    save-url-to-disk: (t, cb) ~>
-        # console.log "save-url-to-disk: saving #{t.to-string!} to disk"
-        err, body <~ @read-resolved t
-        return cb err if err?
-        err <~ @save-buffer-to-disk t, body
-        cb err
-
-txdisabled = 'http://txdisabilities.org/'
-reddit = "https://reddit.com/r/pics"
-stanthonysf = 'https://www.stanthonysf.org/myaccount/'
-
-u = txdisabled
-new Extractenator9000 u, dir: 'o' .run (err) ->
-    console.log "Extractenator9000: err", err, "on", u if err?
+new Extractenator9000().run (err) ->
+    console.log "Extractenator9000: err", err, "on", app.uri if err?
     process.exit 0
