@@ -4,7 +4,7 @@ require! './config'
 require! css
 fs = require 'fs-extra'
 require! path
-{compact, each, filter, flatten, map, reject, take-while} = require 'prelude-ls'
+{compact, each, filter, flatten, head, map, reject} = require 'prelude-ls'
 require! request
 require! url
 
@@ -45,6 +45,11 @@ class Task
             'Referer': app.uri
             'User-Agent': config.USER_AGENT
 
+    get-basename: ->
+        basename = (path.basename @resolved .split '?')[0]
+        return 'index.html' unless basename.length > 0
+        basename
+
     get-directory: ->
         | /image\//.test @content-type => \image
         | /css/.test @content-type => \css
@@ -53,12 +58,13 @@ class Task
         | otherwise ''
 
     get-filename: (dir) ->
-        @filename = (path.join dir, @get-directory!, path.basename @resolved .split '?')[0]
-        # console.log "get-filename: #{@to-string!} is filename #{@filename}"
+        @filename = path.join dir, @get-directory!, @get-basename!
+        console.log "get-filename: #{@to-string!} is filename #{@filename}"
     
     get-html: -> @elem.html!
 
     read-resolved: (cb) ~>
+        # console.log "read-resolved: #{@to-string!} null resolved #{not resolved?}"
         return cb null, null unless @resolved?
         (err, resp, body) <~ @request @resolved
         return cb err if err?
@@ -92,29 +98,25 @@ class Task
     to-string: ->
         "#{@serial-number} #{@referer} #{@tag} #{@attr} #{@resolved}"
 
-class CssTask extends Task
+class DeclTask extends Task
     get-original: ->
-        @original = @elem.value
         pattern = /^(.*url\(['"]*)(.+?)(['"]*\).*)/
-        @parts = pattern.exec @original
-        console.log "CssTask.get-original: #{@to-string!} parts #{@parts}"
+        @parts = pattern.exec @elem.value
+        @original = @parts[2]
 
     store-filename: ->
-        @parts[2] = "/#{@filename or @resolved}"
+        @parts[2] = "#{@filename or @resolved}"
         @elem.value = @parts .slice 1 .join ''
-        console.log "CssTask.store-filename: #{@to-string!} parts #{@parts}"
+        console.log "DeclTask.store-filename: #{@to-string!} elem.value #{@elem.value}"
 
 class FileTask extends Task
     get-original: -> @original = @elem.attr @attr
-    store-filename: -> @elem.attr @attr, "/#{@filename or @resolved}"
+    store-filename: -> @elem.attr @attr, "#{@filename or @resolved}"
 
 class HtmlTask extends Task
     get-original: ->
         @original = @referer
         @resolved = @original
-        u = url.parse @original
-        u.pathname = path.join u.pathname, '/', "index.html" if path.basename(u.pathname).length == 0
-        @resolved = url.format u
         @content-type = 'text/html'
 
     store-filename: ->
@@ -141,10 +143,6 @@ class Extractenator9000
         $ 'style[type*=css]' .each -> task-list.push new FileTask app.uri, $(this), 'style', ''
         reject @not-useful, task-list
 
-    modify-declaration: (decl, cb) ->
-        console.log "modify-declaration: decl '#{decl.value}' from '#{decl.position.source}'"
-        cb null
- 
     process-css-buffer: (t, body, cb) ->
         # console.log "process-css-buffer: #{t.to-string!}, body has #{body?.length} bytes"
         return cb null unless body?
@@ -157,30 +155,25 @@ class Extractenator9000
             |> compact
             |> filter @has-url
             
-        tasks = decls.map (it) -> new CssTask t.resolved, it, '', ''
-        console.log map (.to-string!) tasks
-
         console.log "process-css-buffer: #{t.to-string!}, rules have #{decls.length} url declarations"
-        err <- async.each decls, @modify-declaration
+        tasks = decls.map (it) -> new DeclTask t.resolved, it, '', ''
+        err <~ async.each tasks, @process-css-decl
         return cb err if err?
-        # console.log "process-css-buffer: #{t.to-string!}, modify-declaration returned err #{err}"
-        # return cb err if err?
-        # cb null, css.stringify obj
-        cb null, body
-    
+        cb null, css.stringify obj
+
+    process-css-decl: (t, cb) ->t.save-url-to-disk cb
+
     process-css-file-task: (t, cb) ~>
         # console.log "process-css-task: #{t.to-string!} has resolved #{t.resolved}"
         (err, body) <~ t.read-resolved
         return cb err if err?
         (err, body) <~ @process-css-buffer t, body
-        console.log "process-css-task: #{t.to-string!} process-css-buffer returned err #{err} and #{body.length} bytes"
         return cb err if err?
         t.save-buffer-to-disk body, cb
 
     process-style-task: (t, cb) ->
         # console.log "parse-embedded-css: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS"
         (err, body) <- @process-css-buffer t, t.get-html!
-        console.log "process-css-buffer: #{t.to-string!} process-css-buffer returned err #{err} and #{body.length} bytes"
         return cb err if err?
         t.set-html body, cb
 
