@@ -124,21 +124,23 @@ class Extractenator9000
     has-url: (x) -> /url/.test x.value
 
     not-useful: (t) ->
-        return not t.original?
-            or not t.resolved?
-            or not /^http/.test t.resolved
-            or t.resolved.slice(-1) == '/'
-            or url.parse t.original .hostname in config.CDN_HOSTS
+        switch t.tag
+            | 'css-embedded' => false
+            | otherwise
+                not t.original?
+                or not t.resolved?
+                or not /^http/.test t.resolved
+                or t.resolved.slice(-1) == '/'
+                or url.parse t.original .hostname in config.CDN_HOSTS
 
-    load-task-lists: ($) ->
-        file-tasks = []
-        css-tasks = [] 
-        $ 'a' .each -> file-tasks.push new FileTask app.uri, $(this), 'anchor', 'href'
-        $ 'script[src*=js]' .each -> file-tasks.push new FileTask app.uri, $(this), 'script', 'src'
-        # $ 'style[type*=css]' .each -> queue.push new FileTask app.uri, $(this), 'css-embedded', ''
-        $ 'img:not([src^=data])' .each -> file-tasks.push new FileTask app.uri, $(this), 'img', 'src'
-        $ 'link[rel=stylesheet]' .each -> css-tasks.push new FileTask app.uri, $(this), 'css', 'href'
-        file-tasks: (reject @not-useful, file-tasks), css-tasks: (reject @not-useful, css-tasks)
+    load-task-list: ($) ->
+        task-list = []
+        $ 'a' .each -> task-list.push new FileTask app.uri, $(this), 'anchor', 'href'
+        $ 'script[src*=js]' .each -> task-list.push new FileTask app.uri, $(this), 'script', 'src'
+        $ 'img:not([src^=data])' .each -> task-list.push new FileTask app.uri, $(this), 'img', 'src'
+        $ 'link[rel=stylesheet]' .each -> task-list.push new FileTask app.uri, $(this), 'css', 'href'
+        $ 'style[type*=css]' .each -> task-list.push new FileTask app.uri, $(this), 'css-embedded', ''
+        reject @not-useful, task-list
 
     modify-declaration: (decl, cb) ->
         console.log "modify-declaration: decl '#{decl.value}' from '#{decl.position.source}'"
@@ -158,34 +160,31 @@ class Extractenator9000
         console.log "parse-css-buffer: #{t.to-string!}, rules have #{decls.length} url declarations"
         err <- async.each decls, @modify-declaration
         return cb err if err?
-        cb null, body
         # console.log "parse-css-buffer: #{t.to-string!}, modify-declaration returned err #{err}"
         # return cb err if err?
-        # if t.resolved .indexOf \home != -1
-        #     # console.log JSON.stringify obj
-        #     process.exit 0
         # cb null, css.stringify obj
-
-    parse-embedded-css: (t, cb) ->
-        # console.log "parse-embedded-css: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS"
-        (err, body) <- @parse-css-buffer t, t.get-html!
-        return cb err if err?
-        t.set-html body, cb
-
-    process-css-task: (t, cb) ~>
+        cb null, body
+    
+    process-css-file-task: (t, cb) ~>
         # console.log "process-css-task: #{t.to-string!} has resolved #{t.resolved}"
-        return cb null unless t.resolved?
         (err, body) <~ t.read-resolved
-        # console.log "process-css-task: #{t.to-string!} read-resolved returned err #{err} and #{body.length} bytes"
         return cb err if err?
         (err, body) <~ @parse-css-buffer t, body
         console.log "process-css-task: #{t.to-string!} parse-css-buffer returned err #{err} and #{body.length} bytes"
         return cb err if err?
         t.save-buffer-to-disk body, cb
-        
-    process-file-task: (t, cb) ~>
+
+    process-embedded-css: (t, cb) ->
+        # console.log "parse-embedded-css: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS"
+        (err, body) <- @parse-css-buffer t, t.get-html!
+        return cb err if err?
+        t.set-html body, cb
+
+    process-task-list: (t, cb) ~>
         switch t.tag
             | 'anchor' => t.store-filename!; cb null
+            | 'css-embeded' => @process-embedded-css t, cb
+            | 'css' => @process-css-file-task t, cb
             | otherwise => t.save-url-to-disk cb
       
     run: (cb) ->
@@ -193,13 +192,9 @@ class Extractenator9000
         err, body <~ t.read-resolved
         return cb err if err?
         $ = cheerio.load body.toString 'utf-8'
-        task-lists = @load-task-lists $
-        console.log "run: task-lists returned #{task-lists.file-tasks.length} file tasks and #{task-lists.css-tasks.length} CSS tasks"
-        err <~ async.each task-lists.css-tasks, @process-css-task
+        task-list = @load-task-list $
+        err <~ async.each task-list, @process-task-list
         return cb err if err?
-        err <~ async.each task-lists.file-tasks, @process-file-task
-        return cb err if err?
-        console.log "run: #{t.toString!}"
         t.save-buffer-to-disk $.html!, cb
 
 new Extractenator9000().run (err) ->
