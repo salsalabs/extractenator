@@ -113,7 +113,7 @@ class HtmlTask extends Task
         @original = @referer
         @resolved = @original
         u = url.parse @original
-        url.pathname = path.join @original, '/', "index.html" unless path.basename(url.pathname)?
+        u.pathname = path.join u.pathname, '/', "index.html" if path.basename(u.pathname).length == 0
         @resolved = url.format u
         @content-type = 'text/html'
 
@@ -200,6 +200,7 @@ class Extractenator9000
         return cb err if err?
         err <~ async.each task-lists.file-tasks, @process-file-task
         return cb err if err?
+        console.log "run: #{t.toString!}"
         t.save-buffer-to-disk $.html!, cb
 
 new Extractenator9000().run (err) ->
