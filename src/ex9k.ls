@@ -95,13 +95,14 @@ class Task
 class CssTask extends Task
     get-original: ->
         @original = @elem.value
+        console.log "CssTask: @original is #{@original}"
         pattern = //
             ^(.+url\(['"]*)    # left
             (.+)                # middle -- URL of interest
             (['"]*\))           # right
             //
         @parts = pattern.exec @original
-        console.log "${@to-string!} parts are #{parts}"
+        console.log "#{@to-string!} parts are #{@parts}"
     store-filename: -> @elem.value = "/#{@filename or @resolved}"
 
 class FileTask extends Task
@@ -134,7 +135,7 @@ class Extractenator9000
         css-tasks = [] 
         $ 'a' .each -> file-tasks.push new FileTask app.uri, $(this), 'anchor', 'href'
         $ 'script[src*=js]' .each -> file-tasks.push new FileTask app.uri, $(this), 'script', 'src'
-        # $ 'style[type*=css]' .each -> queue.push new FileTask app.uri, $(this), 'css-embedded', '' ->
+        # $ 'style[type*=css]' .each -> queue.push new FileTask app.uri, $(this), 'css-embedded', ''
         $ 'img:not([src^=data])' .each -> file-tasks.push new FileTask app.uri, $(this), 'img', 'src'
         $ 'link[rel=stylesheet]' .each -> css-tasks.push new FileTask app.uri, $(this), 'css', 'href'
         file-tasks: (reject @not-useful, file-tasks), css-tasks: (reject @not-useful, css-tasks)
@@ -147,7 +148,6 @@ class Extractenator9000
         # console.log "parse-css-buffer: #{t.to-string!}, body has #{body?.length} bytes"
         return cb null unless body?
         obj = css.parse body.toString!, silent: true, source: t.referer
-        # console.log "parse-css-buffer: #{t.to-string!}, object has stylesheet? #{obj.stylesheet?}"
         return cb null unless obj.stylesheet?
         return cb null unless obj.stylesheet.rules?
         decls = obj.stylesheet.rules
@@ -184,7 +184,6 @@ class Extractenator9000
         t.save-buffer-to-disk body, cb
         
     process-file-task: (t, cb) ~>
-        # console.log "process-file-task #{t.to-string!}"
         switch t.tag
             | 'anchor' => t.store-filename!; cb null
             | otherwise => t.save-url-to-disk cb
