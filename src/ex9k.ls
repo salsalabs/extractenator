@@ -7,18 +7,10 @@ require! path
 {compact, each, filter, flatten, head, map, reject} = require 'prelude-ls'
 require! request
 require! url
+{Org} = require './org'
 
-txdisabled = 'http://txdisabilities.org/'
-reddit = "https://reddit.com/r/pics"
-stanthonysf = 'https://www.stanthonysf.org/myaccount/'
-
-    
-class App
-    uri: stanthonysf
-    dir: 'o/51137/images/20133'
-    root-dir: '/'
-
-app = new App()
+org = new Org()
+console.log "org: ", org
 
 class Task
     @serial-number = 0
@@ -33,6 +25,7 @@ class Task
         return unless @original?
         return if @original instanceof Object
         u = url.parse @referer
+        console.log "Task: @original is", @original
         @resolved = "#{u.protocol}#{@original}" if RegExp '^//' .test @original
         o = url.parse @original
         @resolved = url.resolve @referer, @original unless o.protocol?
@@ -42,7 +35,7 @@ class Task
         jar: true
         encoding: null
         headers:
-            'Referer': app.uri
+            'Referer': org.uri
             'User-Agent': config.USER_AGENT
 
     get-basename: ->
@@ -74,14 +67,14 @@ class Task
         cb null, null
 
     save-buffer-to-disk: (body, cb) ~>
-        console.log "save-buffer-to-disk: #{@to-string!}"
-        @get-filename app.dir
+        # console.log "save-buffer-to-disk: #{@to-string!}"
+        @get-filename org.dir
         target-dir = path.dirname @filename
         err <~ fs.mkdirs target-dir
-        console.log "save-buffer-to-dir mkdirs returned #err"
+        console.log "save-buffer-to-dir mkdirs returned #err" if err?
         return cb null if err?
 
-        console.log "save-buffer-to-disk: #{@to-string!} saved to file #{@filename}"
+        console.log "save-buffer-to-disk: #{@filename}"
         err <~ fs.writeFile @filename, body, encoding: null
         return cb err if err?
         @store-filename!
@@ -106,12 +99,12 @@ class DeclTask extends Task
         @original = @parts[2]
 
     store-filename: ->
-        @parts[2] = "#{app.root-dir}#{@filename or @resolved}"
+        @parts[2] = "#{org.root-dir}#{@filename or @resolved}"
         @elem.value = @parts .slice 1 .join ''
 
 class FileTask extends Task
     get-original: -> @original = @elem.attr @attr
-    store-filename: -> @elem.attr @attr, "#{app.root-dir}#{@filename or @resolved}"
+    store-filename: -> @elem.attr @attr, "#{org.root-dir}#{@filename or @resolved}"
 
 class HtmlTask extends Task
     get-original: ->
@@ -136,15 +129,15 @@ class Extractenator9000
 
     load-task-list: ($) ->
         task-list = []
-        $ 'a' .each -> task-list.push new FileTask app.uri, $(this), 'anchor', 'href'
-        $ 'script[src*=js]' .each -> task-list.push new FileTask app.uri, $(this), 'script', 'src'
-        $ 'img:not([src^=data])' .each -> task-list.push new FileTask app.uri, $(this), 'img', 'src'
-        $ 'link[rel=stylesheet]' .each -> task-list.push new FileTask app.uri, $(this), 'css', 'href'
-        $ 'style[type*=css]' .each -> task-list.push new FileTask app.uri, $(this), 'style', ''
+        $ 'a' .each -> task-list.push new FileTask org.uri, $(this), 'anchor', 'href'
+        $ 'script[src*=js]' .each -> task-list.push new FileTask org.uri, $(this), 'script', 'src'
+        $ 'img:not([src^=data])' .each -> task-list.push new FileTask org.uri, $(this), 'img', 'src'
+        $ 'link[rel=stylesheet]' .each -> task-list.push new FileTask org.uri, $(this), 'css', 'href'
+        $ 'style[type*=css]' .each -> task-list.push new FileTask org.uri, $(this), 'style', ''
         reject @not-useful, task-list
 
     process-css-buffer: (t, body, cb) ->
-        console.log "process-css-buffer: #{t.to-string!}, body has #{body?.length} bytes"
+        # console.log "process-css-buffer: #{t.to-string!}, body has #{body?.length} bytes"
         return cb null unless body?
         obj = css.parse body.toString!, silent: true, source: t.referer
         return cb null unless obj.stylesheet?
@@ -155,7 +148,7 @@ class Extractenator9000
             |> compact
             |> filter @has-url
 
-        console.log "process-css-buffer: #{t.to-string!}, rules have #{decls.length} url declarations"
+        # console.log "process-css-buffer: #{t.to-string!}, rules have #{decls.length} url declarations"
         tasks = decls.map (it) -> new DeclTask t.resolved, it, '', ''
         err <~ async.each tasks, @process-css-decl
         return cb err if err?
@@ -185,7 +178,7 @@ class Extractenator9000
             | otherwise => t.save-url-to-disk cb
       
     run: (cb) ->
-        t = new HtmlTask app.uri, '', '', ''
+        t = new HtmlTask org.uri, '', '', ''
         err, body <~ t.read-resolved
         return cb err if err?
         $ = cheerio.load body.toString 'utf-8'
@@ -195,5 +188,5 @@ class Extractenator9000
         t.save-buffer-to-disk $.html!, cb
 
 new Extractenator9000().run (err) ->
-    # console.log "Extractenator9000: err", err, "on", app.uri if err?
+    # console.log "Extractenator9000: err", err, "on", org.uri if err?
     process.exit 0
