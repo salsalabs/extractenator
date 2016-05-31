@@ -15,9 +15,8 @@ stanthonysf = 'https://www.stanthonysf.org/myaccount/'
     
 class App
     uri: stanthonysf
-    dir: \o
+    dir: 'o/51137/images/20133'
     root-dir: '/'
-    # Always read URLs as buffers buffers.  Convert buffers to string as needed for parsing.
 
 app = new App()
 
@@ -72,22 +71,24 @@ class Task
         @status-code = resp.statusCode
         @content-type = resp.headers.'content-type'
         return cb null, body if @status-code == 200
-        return cb null, null
+        cb null, null
 
     save-buffer-to-disk: (body, cb) ~>
-        # console.log "save-buffer-to-disk: #{@to-string!}"
+        console.log "save-buffer-to-disk: #{@to-string!}"
         @get-filename app.dir
         target-dir = path.dirname @filename
         err <~ fs.mkdirs target-dir
-        cb null if err?
+        console.log "save-buffer-to-dir mkdirs returned #err"
+        return cb null if err?
 
+        console.log "save-buffer-to-disk: #{@to-string!} saved to file #{@filename}"
         err <~ fs.writeFile @filename, body, encoding: null
         return cb err if err?
         @store-filename!
         cb null
 
     save-url-to-disk: (cb) ~>
-        # console.log "save-url-to-disk: saving #{@to-string!} to disk"
+        # console.log "save-url-to-disk: saving #(@content-type} #{@to-string!} to disk"
         err, body <~ @read-resolved
         return cb err if err?
         err <~ @save-buffer-to-disk body
@@ -143,7 +144,7 @@ class Extractenator9000
         reject @not-useful, task-list
 
     process-css-buffer: (t, body, cb) ->
-        # console.log "process-css-buffer: #{t.to-string!}, body has #{body?.length} bytes"
+        console.log "process-css-buffer: #{t.to-string!}, body has #{body?.length} bytes"
         return cb null unless body?
         obj = css.parse body.toString!, silent: true, source: t.referer
         return cb null unless obj.stylesheet?
@@ -153,7 +154,7 @@ class Extractenator9000
             |> flatten
             |> compact
             |> filter @has-url
-            
+
         console.log "process-css-buffer: #{t.to-string!}, rules have #{decls.length} url declarations"
         tasks = decls.map (it) -> new DeclTask t.resolved, it, '', ''
         err <~ async.each tasks, @process-css-decl
@@ -194,5 +195,5 @@ class Extractenator9000
         t.save-buffer-to-disk $.html!, cb
 
 new Extractenator9000().run (err) ->
-    console.log "Extractenator9000: err", err, "on", app.uri if err?
+    # console.log "Extractenator9000: err", err, "on", app.uri if err?
     process.exit 0
