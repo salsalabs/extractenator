@@ -25,8 +25,6 @@ class Task
         return unless @original?
         return if @original instanceof Object
         u = url.parse @referer
-        console.log "Task: @original is", @original
-        @resolved = "#{u.protocol}#{@original}" if RegExp '^//' .test @original
         o = url.parse @original
         @resolved = url.resolve @referer, @original unless o.protocol?
         @resolved = @original unless @resolved?
@@ -114,9 +112,17 @@ class HtmlTask extends Task
 
     store-filename: ->
 
-class Extractenator9000
-    has-url: (x) -> /url/.test x.value
+class ImportTask extends Task
+    get-original: ->
+        pattern = /^(.*url\(['"]*)(.+?)(['"]*\).*)/
+        @parts = pattern.exec @elem.import
+        @original = @parts[2]
 
+    store-filename: ->
+        @parts[2] = "#{org.root-dir}#{@filename or @resolved}"
+        @elem.import = @parts .slice 1 .join ''
+
+class Extractenator9000
     not-useful: (t) ->
         switch t.tag
             | 'css-embedded' => false
@@ -135,22 +141,16 @@ class Extractenator9000
         $ 'link[rel=stylesheet]' .each -> task-list.push new FileTask org.uri, $(this), 'css', 'href'
         $ 'style[type*=css]' .each -> task-list.push new FileTask org.uri, $(this), 'style', ''
         reject @not-useful, task-list
-
+        
     process-css-buffer: (t, body, cb) ->
-        # console.log "process-css-buffer: #{t.to-string!}, body has #{body?.length} bytes"
+        # console.log "process-css-buffer: #{t.to-string!}, body has #{body?.length} bytes
         return cb null unless body?
         obj = css.parse body.toString!, silent: true, source: t.referer
         return cb null unless obj.stylesheet?
         return cb null unless obj.stylesheet.rules?
-        decls = obj.stylesheet.rules
-            |> map (.declarations)
-            |> flatten
-            |> compact
-            |> filter @has-url
-
-        # console.log "process-css-buffer: #{t.to-string!}, rules have #{decls.length} url declarations"
-        tasks = decls.map (it) -> new DeclTask t.resolved, it, '', ''
-        err <~ async.each tasks, @process-css-decl
+        err <~ @process-decl-list t, obj
+        return cb err if err?
+        err <~ @process-import-list t, obj
         return cb err if err?
         cb null, css.stringify obj
 
@@ -163,6 +163,25 @@ class Extractenator9000
         (err, body) <~ @process-css-buffer t, body
         return cb err if err?
         t.save-buffer-to-disk body, cb
+
+    process-decl-list: (t, obj, cb) ->
+        decls = obj.stylesheet.rules
+            |> map (.declarations)
+            |> flatten
+            |> compact
+            |> filter (declaration) -> /url/.test declaration.value
+        tasks = decls.map (it) -> new DeclTask t.resolved, it, '', ''
+        err <~ async.each tasks, @process-css-decl
+        return cb err
+
+    process-import-list: (t, obj, cb) ->
+        rules = obj.stylesheet.rules
+            |> filter (.import)
+            |> compact
+            |> filter (rule) -> rule.import.indexOf('url(') != -1
+        tasks = rules.map (it) -> new ImportTask t.resolved, it, '', ''
+        err <~ async.each tasks, @process-css-decl
+        return cb err
 
     process-style-task: (t, cb) ->
         # console.log "parse-embedded-css: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS"
