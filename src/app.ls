@@ -204,6 +204,13 @@ class Extractenator9000
         err, body <~ t.read-resolved
         return cb err if err?
         $ = cheerio.load body.toString 'utf-8'
+        e = $ org.tag-selector
+        console.log "Found #{e.length} instances of #{org.tag-selector}"
+        if e.length == 0
+            console.log "tag selector '#{org.tag-selector} does not indentify a node."
+            process.exit 0
+        e.after TEMPLATE_TAGS .remove        
+        
         task-list = @load-task-list $
         err <~ async.each task-list, @process-task-list
         return cb err if err?
@@ -212,3 +219,12 @@ class Extractenator9000
 new Extractenator9000().run (err) ->
     # console.log "Extractenator9000: err", err, "on", org.uri if err?
     process.exit 0
+
+TEMPLATE_TAGS = """
+
+<!-- Template tags inserted by Extractenator 9000  #{new Date().toISOString()} -->
+<!-- TemplateBeginEditable name="content" -->
+<h1>Page content here.</h1>
+<!-- TemplateEndEditable -->
+
+"""
