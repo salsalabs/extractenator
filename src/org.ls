@@ -1,4 +1,4 @@
 export class Org
-    uri: 'http://www.stanthonysf.org/'
-    dir: 'o/12345/images/1234'
+    uri: 'http://colinbeavan.com/join/'
+    dir: 'o/50176/images/20969'
     root-dir: '/'
