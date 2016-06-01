@@ -102,23 +102,19 @@ being read.  Just sayin'...
 This package contains a program that
 
 * Accepts a URL to be extracted
-* Reads the URL and stores it locally
-* Reads all of the resources used by the page (images, scripts, CSS, etc.) and
-stores them locally
-* Scans the resources and copies any resources embedded in each
-* Modifies any resource files to use the correct URLs for downloaded resources
-* Copies the resources to Salsa
-* Modifies the template to replace resource URLs from your website with URLs
-from Salsa
-* Stores the template on Salsa
-* Cleans up after itself
+* Reads all of the resource files and stores them locally.
+* Modifies the template to reference the local files as relative files.  The file structure is the same as in Salsa.
+* Saves the template to disk.
+* Reads each CSS file, stores the resources and modifies the CSS to reference a local file.
+* Saves each CSS file to disk.
 
+When the program is done, then
+* The template needs to be stored on Salsa as a template.
+* The files and their directories need to be transferred to Salsa's image repository. (Manual, but not that ugly.)
 ## Still to do...
 
-This package will support a facility so that you can choose where Salsa content
-will go. Until that facility is working, the template saved to Salsa will need
-to be edited manually so that the Salsa "template tags" are where you want
-Salsa content to appear.
+* Automatically create a template on Salsa.
+* Automatically upload files to the image repository.
 
 <a name="installation"></a>
 # Installation
@@ -127,7 +123,7 @@ Salsa content to appear.
 Before installation, you should have these software packages installed:
 
 1. [Node.js](http://nodejs.org/ "Node.js's Homepage")
-2. [CoffeeScript](http://coffeescript.org/ "Coffeescript's Homepage")
+2. [LiveScript](http://livescript.net/ "LiveScript's Homepage")
 3. [Git](http://git-scm.com/ "Homepage for the Git source control program")
 
 ## Getting Extractentator
