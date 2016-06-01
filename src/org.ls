@@ -1,4 +1,4 @@
 export class Org
-    uri: 'http://www.txdisabilities.org/about-us'
-    dir: 'o/50324/images/20970'
+    uri: 'http://www.stanthonysf.org/'
+    dir: 'o/12345/images/1234'
     root-dir: '/'
