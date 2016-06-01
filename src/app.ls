@@ -10,7 +10,6 @@ require! url
 {Org} = require './org'
 
 org = new Org()
-console.log "org: ", org
 
 class Task
     @serial-number = 0
@@ -92,13 +91,17 @@ class Task
 
 class DeclTask extends Task
     get-original: ->
-        pattern = /^(.*url\(['"]*)(.+?)(['"]*\).*)/
-        @parts = pattern.exec @elem.value
-        @original = @parts[2]
+        pattern = //
+            (.*url\(['"]*)
+            (.+?)
+            (['"]*\).*)
+            //
+        @matches = pattern.exec @elem.value
+        @original = @matches[2]
 
     store-filename: ->
-        @parts[2] = "#{org.root-dir}#{@filename or @resolved}"
-        @elem.value = @parts .slice 1 .join ''
+        @matches[2] = "#{org.root-dir}#{@filename or @resolved}"
+        @elem.value = @matches .slice 1 .join ''
 
 class FileTask extends Task
     get-original: -> @original = @elem.attr @attr
