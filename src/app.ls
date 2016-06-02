@@ -12,10 +12,8 @@ require! url
 org = new Org()
 
 class Task
-    @serial-number = 0
     (@referer, @elem, @tag, @attr) ->
         @resolved = null
-        @serial-number = @@serial-number++
         @content-type = null
         @status-code = null
         @filename = null
@@ -23,9 +21,7 @@ class Task
         @get-original!        
         return unless @original?
         return if @original instanceof Object
-        u = url.parse @referer
-        o = url.parse @original
-        @resolved = url.resolve @referer, @original unless o.protocol?
+        @resolved = url.resolve @referer, @original unless url.parse @original .protocol?
         @resolved = @original unless @resolved?
 
     request: request.defaults do
@@ -36,7 +32,7 @@ class Task
             'User-Agent': config.USER_AGENT
 
     get-basename: ->
-        basename = (path.basename @resolved .split '?')[0]
+        basename = head (path.basename @resolved .split '?')
         return 'index.html' unless path.extname basename .length > 0
         basename
 
@@ -46,9 +42,6 @@ class Task
         | /javascript/.test @content-type => \javascript
         | /font/.test @content-type => \font
         | otherwise ''
-
-    get-filename: (dir) ->
-        @filename = path.join dir, @get-directory!, @get-basename!
 
     get-html: -> @elem.html!
 
@@ -65,7 +58,7 @@ class Task
 
     save-buffer-to-disk: (body, cb) ~>
         # console.log "save-buffer-to-disk: #{@to-string!}"
-        @get-filename org.dir
+        @filename = path.join org.dir, @get-directory!, @get-basename!
         target-dir = path.dirname @filename
         err <~ fs.mkdirs target-dir
         console.log "save-buffer-to-dir mkdirs returned #err" if err?
@@ -87,7 +80,7 @@ class Task
     set-html: (body) ->@elem.html body
 
     to-string: ->
-        "#{@serial-number} #{@referer} #{@tag} #{@attr} #{@resolved}"
+        "#{@referer} #{@tag} #{@attr} #{@resolved}"
 
 class DeclTask extends Task
     get-original: ->
@@ -205,26 +198,13 @@ class Extractenator9000
         return cb err if err?
         $ = cheerio.load body.toString 'utf-8'
         e = $ org.tag-selector
-        console.log "Found #{e.length} instances of #{org.tag-selector}"
-        if e.length == 0
-            console.log "tag selector '#{org.tag-selector} does not indentify a node."
-            process.exit 0
-        e.after TEMPLATE_TAGS .remove        
-        
+        return cb "tag selector '#{org.tag-selector} does not indentify a node." if e.length == 0
+        e.after config.TEMPLATE_TAGS .remove
         task-list = @load-task-list $
         err <~ async.each task-list, @process-task-list
         return cb err if err?
         t.save-buffer-to-disk $.html!, cb
 
 new Extractenator9000().run (err) ->
-    # console.log "Extractenator9000: err", err, "on", org.uri if err?
+    console.log "Extractenator9000: err", err, "on", org.uri if err?
     process.exit 0
-
-TEMPLATE_TAGS = """
-
-<!-- Template tags inserted by Extractenator 9000  #{new Date().toISOString()} -->
-<!-- TemplateBeginEditable name="content" -->
-<h1>Page content here.</h1>
-<!-- TemplateEndEditable -->
-
-"""
