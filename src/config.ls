@@ -7,8 +7,14 @@ export CDN_HOSTS =
     'cdnjs.cloudflare.com'
     'hello.myfonts.net' 
 
-export JQUERY =
-    [ 'https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js' ]
+export TEMPLATE_TAGS = """
+
+<!-- Template tags inserted by Extractenator 9000  #{new Date().toISOString()} -->
+<!-- TemplateBeginEditable name="content" -->
+<h1>Page content here.</h1>
+<!-- TemplateEndEditable -->
+
+"""
 
 export USER_AGENT =
     'Mozilla/5.0 (Windows NT 6.2; Win64; x64) AppleWebKit/537.36
