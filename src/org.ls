@@ -1,6 +1,6 @@
 export class Org
-    uri: 'http://colinbeavan.com/join/'
-    dir: 'o/50176/images/20969'
+    uri: 'http://www.txdisabilities.org/'
+    dir: 'o/50324/images/20970'
     root-dir: '/'
-    tag-selector: '#main'
+    tag-selector: '.main-content > div:nth-child(1)'
 
