@@ -62,13 +62,16 @@ class Task
     save-buffer-to-disk: (body, cb) ~>
         # console.log "save-buffer-to-disk: #{@to-string!}"
         @get-filename org.dir
-        target-dir = path.dirname @filename
+        local-filename = switch @filename.slice 0 1
+            | '/' => @filename.slice 1
+            | otherwise => @filename
+        target-dir = path.dirname local-filename
         err <~ fs.mkdirs target-dir
         console.log "save-buffer-to-dir mkdirs returned #err" if err?
         return cb null if err?
 
-        console.log "save-buffer-to-disk: #{@filename}"
-        err <~ fs.writeFile @filename, body, encoding: null
+        console.log "save-buffer-to-disk: #{local-filename}"
+        err <~ fs.writeFile local-filename, body, encoding: null
         return cb err if err?
         @store-filename!
         cb null
