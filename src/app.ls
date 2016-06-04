@@ -43,9 +43,6 @@ class Task
         | /font/.test @content-type => \font
         | otherwise ''
 
-    get-filename: (dir) ->
-        @filename = path.join dir, @get-directory!, @get-basename!
-
     get-html: -> @elem.html!
 
     read-resolved: (cb) ~>
@@ -61,7 +58,7 @@ class Task
 
     save-buffer-to-disk: (body, cb) ~>
         # console.log "save-buffer-to-disk: #{@to-string!}"
-        @get-filename org.dir
+        @filename = path.join org.dir, @get-directory!, @get-basename!
         local-filename = switch @filename.slice 0 1
             | '/' => @filename.slice 1
             | otherwise => @filename
