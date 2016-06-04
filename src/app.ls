@@ -205,19 +205,19 @@ class Extractenator9000
         return cb err if err?
         $ = cheerio.load body.toString 'utf-8'
         e = $ org.tag-selector
-        console.log "Found #{e.length} instances of #{org.tag-selector}"
-        if e.length == 0
-            console.log "tag selector '#{org.tag-selector} does not indentify a node."
-            process.exit 0
-        e.after TEMPLATE_TAGS .remove
+        switch e.length
+        | 0 => return cb "tag selector '#{org.tag-selector}' does not indentify a node."
+        | 1 =>
+        | otherwise => return cb console.log "tag selector '#{org.tag-selector}' identifies #{e.length} nodes, must only identify one."
 
+        e.after TEMPLATE_TAGS .remove!
         task-list = @load-task-list $
         err <~ async.each task-list, @process-task-list
         return cb err if err?
         t.save-buffer-to-disk $.html!, cb
 
 new Extractenator9000().run (err) ->
-    console.log "Extractenator9000: err", err, "on", org.uri if err?
+    console.log err, "on", org.uri if err?
     process.exit 0
 
 TEMPLATE_TAGS = """
