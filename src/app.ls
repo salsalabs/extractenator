@@ -12,10 +12,8 @@ require! url
 org = new Org()
 
 class Task
-    @serial-number = 0
     (@referer, @elem, @tag, @attr) ->
         @resolved = null
-        @serial-number = @@serial-number++
         @content-type = null
         @status-code = null
         @filename = null
@@ -23,9 +21,7 @@ class Task
         @get-original!        
         return unless @original?
         return if @original instanceof Object
-        u = url.parse @referer
-        o = url.parse @original
-        @resolved = url.resolve @referer, @original unless o.protocol?
+        @resolved = url.resolve @referer, @original unless url.parse @original .protocol?
         @resolved = @original unless @resolved?
 
     request: request.defaults do
@@ -87,7 +83,7 @@ class Task
     set-html: (body) ->@elem.html body
 
     to-string: ->
-        "#{@serial-number} #{@referer} #{@tag} #{@attr} #{@resolved}"
+        "#{@referer} #{@tag} #{@attr} #{@resolved}"
 
 class DeclTask extends Task
     get-original: ->
@@ -100,12 +96,12 @@ class DeclTask extends Task
         @original = @matches[2]
 
     store-filename: ->
-        @matches[2] = "#{org.root-dir}#{@filename or @resolved}"
+        @matches[2] = "#{@filename or @resolved}"
         @elem.value = @matches .slice 1 .join ''
 
 class FileTask extends Task
     get-original: -> @original = @elem.attr @attr
-    store-filename: -> @elem.attr @attr, "#{org.root-dir}#{@filename or @resolved}"
+    store-filename: -> @elem.attr @attr, "#{@filename or @resolved}"
 
 class HtmlTask extends Task
     get-original: ->
@@ -122,7 +118,7 @@ class ImportTask extends Task
         @original = @parts[2]
 
     store-filename: ->
-        @parts[2] = "#{org.root-dir}#{@filename or @resolved}"
+        @parts[2] = "#{@filename or @resolved}"
         @elem.import = @parts .slice 1 .join ''
 
 class Extractenator9000
@@ -210,7 +206,7 @@ class Extractenator9000
         | 1 =>
         | otherwise => return cb console.log "tag selector '#{org.tag-selector}' identifies #{e.length} nodes, must only identify one."
 
-        e.after TEMPLATE_TAGS .remove!
+        e.after config.TEMPLATE_TAGS .remove!
         task-list = @load-task-list $
         err <~ async.each task-list, @process-task-list
         return cb err if err?
@@ -219,12 +215,3 @@ class Extractenator9000
 new Extractenator9000().run (err) ->
     console.log err, "on", org.uri if err?
     process.exit 0
-
-TEMPLATE_TAGS = """
-
-<!-- Template tags inserted by Extractenator 9000  #{new Date().toISOString()} -->
-<!-- TemplateBeginEditable name="content" -->
-<h1>Page content here.</h1>
-<!-- TemplateEndEditable -->
-
-"""
