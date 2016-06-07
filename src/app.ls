@@ -4,7 +4,7 @@ require! './config'
 require! css
 fs = require 'fs-extra'
 require! path
-{compact, each, filter, flatten, head, map, reject} = require 'prelude-ls'
+{compact, each, filter, flatten, head, map, reject, replace} = require 'prelude-ls'
 require! request
 require! url
 {Org} = require './org'
@@ -137,6 +137,8 @@ class Extractenator9000
         $ 'a' .each -> task-list.push new FileTask org.uri, $(this), 'anchor', 'href'
         $ 'script[src*=js]' .each -> task-list.push new FileTask org.uri, $(this), 'script', 'src'
         $ 'img:not([src^=data])' .each -> task-list.push new FileTask org.uri, $(this), 'img', 'src'
+        $ 'link[rel*=icon]' .each -> task-list.push new FileTask org.uri, $(this), 'img', 'href'
+        $ 'link[rel=manifest]' .each -> task-list.push new FileTask org.uri, $(this), 'manifest', 'href'
         $ 'link[rel=stylesheet]' .each -> task-list.push new FileTask org.uri, $(this), 'css', 'href'
         $ 'style[type*=css]' .each -> task-list.push new FileTask org.uri, $(this), 'style', ''
         reject @not-useful, task-list
@@ -178,7 +180,7 @@ class Extractenator9000
         return cb err
 
     process-style-task: (t, cb) ->
-        # console.log "parse-embedded-css: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS"
+        console.log "parse-embedded-css: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS\n#{t.elem.html()}\n"
         (err, body) <- @process-css-buffer t, t.get-html!
         return cb err if err?
         t.set-html body, cb
@@ -194,14 +196,15 @@ class Extractenator9000
         t = new HtmlTask org.uri, '', '', ''
         err, body <~ t.read-resolved
         return cb err if err?
-        $ = cheerio.load body.toString 'utf-8'
+        body2 = body.to-string! .replace(/\&apos;/gm, '"').replace(/@/gm, "\n    @")
+        $ = cheerio.load body2.toString 'utf-8'
         e = $ org.tag-selector
         switch e.length
         | 0 => return cb "tag selector '#{org.tag-selector}' does not indentify a node."
         | 1 =>
         | otherwise => return cb console.log "tag selector '#{org.tag-selector}' identifies #{e.length} nodes, must only identify one."
 
-        e.after config.TEMPLATE_TAGS .remove!
+        e.empty! .append config.TEMPLATE_TAGS
         task-list = @load-task-list $
         err <~ async.each task-list, @process-task-list
         return cb err if err?
