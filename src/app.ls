@@ -124,7 +124,7 @@ class ImportTask extends Task
 class Extractenator9000
     not-useful: (t) ->
         switch t.tag
-            | 'css-embedded' => false
+            | 'style' => false
             | otherwise
                 not t.original?
                 or not t.resolved?
@@ -137,9 +137,13 @@ class Extractenator9000
         $ 'a' .each -> task-list.push new FileTask org.uri, $(this), 'anchor', 'href'
         $ 'script[src*=js]' .each -> task-list.push new FileTask org.uri, $(this), 'script', 'src'
         $ 'img:not([src^=data])' .each -> task-list.push new FileTask org.uri, $(this), 'img', 'src'
+        console.log "load-task-list: #{task-list.length} tasks before link:not([rel=stylesheet])"
         $ 'link:not([rel=stylesheet])' .each -> task-list.push new FileTask org.uri, $(this), 'img', 'href'
+        console.log "load-task-list: #{task-list.length} tasks after link:not([rel=stylesheet])"
         $ 'link[rel=stylesheet]' .each -> task-list.push new FileTask org.uri, $(this), 'css', 'href'
+        console.log "load-task-list: #{task-list.length} tasks after link[rel=stylesheet]"
         $ 'style[type*=css]' .each -> task-list.push new FileTask org.uri, $(this), 'style', ''
+        console.log "load-task-list: #{task-list.length} tasks after <style>"
         reject @not-useful, task-list
         
     process-css-buffer: (t, body, cb) ->
@@ -185,6 +189,7 @@ class Extractenator9000
         t.set-html body, cb
 
     process-task-list: (t, cb) ~>
+        console.log "process-task-list: tag is #{t.tag}"
         switch t.tag
             | 'anchor' => t.store-filename!; cb null
             | 'style' => @process-style-task t, cb
@@ -195,7 +200,11 @@ class Extractenator9000
         t = new HtmlTask org.uri, '', '', ''
         err, body <~ t.read-resolved
         return cb err if err?
-        body2 = body.to-string! .replace(/\&apos;/gm, '"').replace(/@/gm, "\n    @")
+        body2 = body.to-string!
+            .replace(/\&apos;/gm, '"')
+            .replace(/@/gm, "\n    @")
+            .replace(/<\!--.+?-->/gm, '')
+            .replace(/<\!--.+?-->/gm, '')
         $ = cheerio.load body2.toString 'utf-8'
         e = $ org.tag-selector
         switch e.length
@@ -205,6 +214,7 @@ class Extractenator9000
 
         e.empty! .append config.TEMPLATE_TAGS
         task-list = @load-task-list $
+        console.log "run: task list contains #{task-list.length} tasks"
         err <~ async.each task-list, @process-task-list
         return cb err if err?
         t.save-buffer-to-disk $.html!, cb
