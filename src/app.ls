@@ -4,7 +4,7 @@ require! './config'
 require! css
 fs = require 'fs-extra'
 require! path
-{compact, each, filter, flatten, head, map, reject, replace} = require 'prelude-ls'
+{compact, each, filter, flatten, head, map, reject} = require 'prelude-ls'
 require! request
 require! url
 {Org} = require './org'
@@ -124,7 +124,7 @@ class ImportTask extends Task
 class Extractenator9000
     not-useful: (t) ->
         switch t.tag
-            | 'style' => false
+            | 'css-embedded' => false
             | otherwise
                 not t.original?
                 or not t.resolved?
@@ -137,18 +137,11 @@ class Extractenator9000
         $ 'a' .each -> task-list.push new FileTask org.uri, $(this), 'anchor', 'href'
         $ 'script[src*=js]' .each -> task-list.push new FileTask org.uri, $(this), 'script', 'src'
         $ 'img:not([src^=data])' .each -> task-list.push new FileTask org.uri, $(this), 'img', 'src'
-        console.log "load-task-list: #{task-list.length} tasks before link:not([rel=stylesheet])"
-        $ 'link:not([rel=stylesheet])' .each -> task-list.push new FileTask org.uri, $(this), 'img', 'href'
-        console.log "load-task-list: #{task-list.length} tasks after link:not([rel=stylesheet])"
         $ 'link[rel=stylesheet]' .each -> task-list.push new FileTask org.uri, $(this), 'css', 'href'
-        console.log "load-task-list: #{task-list.length} tasks after link[rel=stylesheet]"
         $ 'style[type*=css]' .each -> task-list.push new FileTask org.uri, $(this), 'style', ''
-        console.log "load-task-list: #{task-list.length} tasks after <style>"
         reject @not-useful, task-list
         
     process-css-buffer: (t, body, cb) ->
-        # console.log "process-css-buffer: #{t.to-string!}, body has #{body?.length} bytes
-        return cb null unless body?
         obj = css.parse body.toString!, silent: true, source: t.referer
         return cb null unless obj.stylesheet?
         return cb null unless obj.stylesheet.rules?
@@ -158,10 +151,7 @@ class Extractenator9000
         return cb err if err?
         cb null, css.stringify obj
 
-    process-css-decl: (t, cb) ->t.save-url-to-disk cb
-
     process-css-file-task: (t, cb) ~>
-        # console.log "process-css-task: #{t.to-string!} has resolved #{t.resolved}"
         (err, body) <~ t.read-resolved
         return cb err if err?
         (err, body) <~ @process-css-buffer t, body
@@ -175,7 +165,7 @@ class Extractenator9000
             |> compact
             |> filter (declaration) -> /url/.test declaration.value
         tasks = decls.map (it) -> new DeclTask t.resolved, it, '', ''
-        err <~ async.each tasks, @process-css-decl
+        err <~ async.each tasks, (t, cb) -> t.save-url-to-disk cb
         return cb err
 
     process-import-list: (t, obj, cb) ->
@@ -184,17 +174,16 @@ class Extractenator9000
             |> compact
             |> filter (rule) -> rule.import.indexOf('url(') != -1
         tasks = rules.map (it) -> new ImportTask t.resolved, it, '', ''
-        err <~ async.each tasks, @process-css-decl
+        err <~ async.each tasks, (t, cb) -> t.save-url-to-disk cb
         return cb err
 
     process-style-task: (t, cb) ->
-        console.log "parse-embedded-css: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS\n#{t.elem.html()}\n"
+        # console.log "parse-embedded-css: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS"
         (err, body) <- @process-css-buffer t, t.get-html!
         return cb err if err?
         t.set-html body, cb
 
     process-task-list: (t, cb) ~>
-        console.log "process-task-list: tag is #{t.tag}"
         switch t.tag
             | 'anchor' => t.store-filename!; cb null
             | 'style' => @process-style-task t, cb
@@ -205,21 +194,15 @@ class Extractenator9000
         t = new HtmlTask org.uri, '', '', ''
         err, body <~ t.read-resolved
         return cb err if err?
-        body2 = body.to-string!
-            .replace(/\&apos;/gm, '"')
-            .replace(/@/gm, "\n    @")
-            .replace(/<\!--.+?-->/gm, '')
-            .replace(/<\!--.+?-->/gm, '')
-        $ = cheerio.load body2.toString 'utf-8'
+        $ = cheerio.load body.toString 'utf-8'
         e = $ org.tag-selector
         switch e.length
         | 0 => return cb "tag selector '#{org.tag-selector}' does not indentify a node."
         | 1 =>
         | otherwise => return cb console.log "tag selector '#{org.tag-selector}' identifies #{e.length} nodes, must only identify one."
 
-        e.empty! .append config.TEMPLATE_TAGS
+        e.after config.TEMPLATE_TAGS .remove!
         task-list = @load-task-list $
-        console.log "run: task list contains #{task-list.length} tasks"
         err <~ async.each task-list, @process-task-list
         return cb err if err?
         t.save-buffer-to-disk $.html!, cb
