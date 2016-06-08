@@ -138,6 +138,8 @@ class Extractenator9000
         reject @not-useful, task-list
         
     process-css-buffer: (t, body, cb) ->
+        # console.log "process-css-buffer: #{t.to-string!}, body has #{body?.length} bytes
+        return cb null unless body?
         obj = css.parse body.toString!, silent: true, source: t.referer
         return cb null unless obj.stylesheet?
         return cb null unless obj.stylesheet.rules?
@@ -147,7 +149,10 @@ class Extractenator9000
         return cb err if err?
         cb null, css.stringify obj
 
+    process-css-decl: (t, cb) ->t.save-url-to-disk cb
+
     process-css-file-task: (t, cb) ~>
+        # console.log "process-css-task: #{t.to-string!} has resolved #{t.resolved}"
         (err, body) <~ t.read-resolved
         return cb err if err?
         (err, body) <~ @process-css-buffer t, body
@@ -161,7 +166,7 @@ class Extractenator9000
             |> compact
             |> filter (declaration) -> /url/.test declaration.value
         tasks = decls.map (it) -> new DeclTask t.resolved, it, '', ''
-        err <~ async.each tasks, (t, cb) -> t.save-url-to-disk cb
+        err <~ async.each tasks, @process-css-decl
         return cb err
 
     process-import-list: (t, obj, cb) ->
@@ -170,7 +175,7 @@ class Extractenator9000
             |> compact
             |> filter (rule) -> rule.import.indexOf('url(') != -1
         tasks = rules.map (it) -> new ImportTask t.resolved, it, '', ''
-        err <~ async.each tasks, (t, cb) -> t.save-url-to-disk cb
+        err <~ async.each tasks, @process-css-decl
         return cb err
 
     process-style-task: (t, cb) ->
