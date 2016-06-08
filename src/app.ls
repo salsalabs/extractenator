@@ -114,9 +114,8 @@ class HtmlTask extends Task
 class ImportTask extends Task
     get-original: ->
         pattern = /^(.*url\(['"]*)(.+?)(['"]*\).*)/
-        @parts = pattern.exec @elem.import
-        @original = @parts[2]
-
+        @matches = pattern.exec @elem.import
+        @original = @matches[2]
     store-filename: ->
         @matches[2] = "#{@filename or @resolved}"
         @elem.import = @matches .slice 1 .join ''
