@@ -111,7 +111,12 @@ class HtmlTask extends Task
 
     store-filename: ->
 
-class ImportTask extends DeclTask
+class ImportTask extends Task
+    get-original: ->
+        pattern = /^(.*url\(['"]*)(.+?)(['"]*\).*)/
+        @parts = pattern.exec @elem.import
+        @original = @parts[2]
+
     store-filename: ->
         @matches[2] = "#{@filename or @resolved}"
         @elem.import = @matches .slice 1 .join ''
@@ -174,7 +179,7 @@ class Extractenator9000
         return cb err
 
     process-style-task: (t, cb) ->
-        console.log "parse-embedded-css: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS"
+        console.log "parse-embedded-css: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS, \n#{t.elem.html!}\n"
         (err, body) <- @process-css-buffer t, t.get-html!
         return cb err if err?
         t.set-html body, cb
