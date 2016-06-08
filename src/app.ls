@@ -111,10 +111,15 @@ class HtmlTask extends Task
 
     store-filename: ->
 
-class ImportTask extends DeclTask
+class ImportTask extends Task
+    get-original: ->
+        pattern = /^(.*url\(['"]*)(.+?)(['"]*\).*)/
+        @parts = pattern.exec @elem.import
+        @original = @parts[2]
+
     store-filename: ->
-        @matches[2] = "#{@filename or @resolved}"
-        @elem.import = @matches .slice 1 .join ''
+        @parts[2] = "#{@filename or @resolved}"
+        @elem.import = @parts .slice 1 .join ''
 
 class Extractenator9000
     not-useful: (t) ->
@@ -132,9 +137,13 @@ class Extractenator9000
         $ 'a' .each -> task-list.push new FileTask org.uri, $(this), 'anchor', 'href'
         $ 'script[src*=js]' .each -> task-list.push new FileTask org.uri, $(this), 'script', 'src'
         $ 'img:not([src^=data])' .each -> task-list.push new FileTask org.uri, $(this), 'img', 'src'
+        console.log "load-task-list: #{task-list.length} tasks before link:not([rel=stylesheet])"
         $ 'link:not([rel=stylesheet])' .each -> task-list.push new FileTask org.uri, $(this), 'img', 'href'
+        console.log "load-task-list: #{task-list.length} tasks after link:not([rel=stylesheet])"
         $ 'link[rel=stylesheet]' .each -> task-list.push new FileTask org.uri, $(this), 'css', 'href'
+        console.log "load-task-list: #{task-list.length} tasks after link[rel=stylesheet]"
         $ 'style[type*=css]' .each -> task-list.push new FileTask org.uri, $(this), 'style', ''
+        console.log "load-task-list: #{task-list.length} tasks after <style>"
         reject @not-useful, task-list
         
     process-css-buffer: (t, body, cb) ->
@@ -179,16 +188,17 @@ class Extractenator9000
         return cb err
 
     process-style-task: (t, cb) ->
-        console.log "parse-embedded-css: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS"
+        console.log "parse-embedded-css: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS\n#{t.elem.html()}\n"
         (err, body) <- @process-css-buffer t, t.get-html!
         return cb err if err?
         t.set-html body, cb
 
     process-task-list: (t, cb) ~>
+        console.log "process-task-list: tag is #{t.tag}"
         switch t.tag
-            | \anchor => t.store-filename!; cb null
-            | \style => @process-style-task t, cb
-            | \css => @process-css-file-task t, cb
+            | 'anchor' => t.store-filename!; cb null
+            | 'style' => @process-style-task t, cb
+            | 'css' => @process-css-file-task t, cb
             | otherwise => t.save-url-to-disk cb
       
     run: (cb) ->
