@@ -83,7 +83,7 @@ class Task
     set-html: (body) ->@elem.html body
 
     to-string: ->
-        "#{@referer} #{@tag} #{@attr} #{@resolved}"
+        "#{@tag} #{@attr} #{@resolved} #{@filename}"
 
 class DeclTask extends Task
     get-original: ->
@@ -114,8 +114,8 @@ class HtmlTask extends Task
 class ImportTask extends Task
     get-original: ->
         pattern = /^(.*url\(['"]*)(.+?)(['"]*\).*)/
-        @parts = pattern.exec @elem.import
-        @original = @parts[2]
+        @matches = pattern.exec @elem.import
+        @original = @matches[2]
 
     store-filename: ->
         @parts[2] = "#{@filename or @resolved}"
@@ -178,10 +178,11 @@ class Extractenator9000
         return cb err
 
     process-style-task: (t, cb) ->
-        # console.log "parse-embedded-css: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS"
+        # console.log "process-style-task: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS, \n#{t.elem.html!}\n"
         (err, body) <- @process-css-buffer t, t.get-html!
         return cb err if err?
-        t.set-html body, cb
+        t.set-html body
+        cb null
 
     process-task-list: (t, cb) ~>
         switch t.tag
@@ -204,6 +205,7 @@ class Extractenator9000
         e.after config.TEMPLATE_TAGS .remove!
         task-list = @load-task-list $
         err <~ async.each task-list, @process-task-list
+        console.log "run: process-task-list returned err", err
         return cb err if err?
         t.save-buffer-to-disk $.html!, cb
 

@@ -1,5 +1,5 @@
 export class Org
-    uri: 'http://www.txdisabilities.org'
-    dir: '/o/50324/images/20970/'
-    tag-selector: '.row.main-content'
+    uri: 'https://www.pflag.org/about/our-people'
+    dir: 'o/51615/images/20217/'
+    tag-selector: 'div.main-content'
 
