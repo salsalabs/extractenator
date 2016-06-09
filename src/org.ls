@@ -1,5 +1,5 @@
 export class Org
-    uri: 'https://www.pflag.org/about/our-people'
-    dir: '/o/51615/images/20217/'
-    tag-selector: 'div.main-content'
+    uri: 'http://www.nqapia.org/wpp/blog_resources/videos/'
+    dir: '/o/7100/images/19720/'
+    tag-selector: 'div.entry-content-wrapper:nth-child(1)'
 
