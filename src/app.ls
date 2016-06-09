@@ -9,6 +9,12 @@ require! request
 require! url
 {Org} = require './org'
 
+URL_PATTERN = //
+    (.*url\(['"]*)
+    (http.+?)
+    (['"]*\).*)
+//
+
 org = new Org()
 
 class Task
@@ -87,12 +93,7 @@ class Task
 
 class DeclTask extends Task
     get-original: ->
-        pattern = //
-            (.*url\(['"]*)
-            (.+?)
-            (['"]*\).*)
-            //
-        @matches = pattern.exec @elem.value
+        @matches = URL_PATTERN.exec @elem.value
         @original = @matches[2]
 
     store-filename: ->
@@ -113,8 +114,7 @@ class HtmlTask extends Task
 
 class ImportTask extends Task
     get-original: ->
-        pattern = /^(.*url\(['"]*)(.+?)(['"]*\).*)/
-        @matches = pattern.exec @elem.import
+        @matches = URL_PATTERN.exec @elem.import
         @original = @matches[2]
 
     store-filename: ->
@@ -142,6 +142,7 @@ class Extractenator9000
         reject @not-useful, task-list
         
     process-css-buffer: (t, body, cb) ->
+        console.log "process-css-buffer: #{t.to-string!}"
         obj = css.parse body.toString!, silent: true, source: t.referer
         return cb null unless obj.stylesheet?
         return cb null unless obj.stylesheet.rules?
@@ -163,7 +164,7 @@ class Extractenator9000
             |> map (.declarations)
             |> flatten
             |> compact
-            |> filter (declaration) -> /url/.test declaration.value
+            |> filter (declaration) -> URL_PATTERN.test declaration.value
         tasks = decls.map (it) -> new DeclTask t.resolved, it, '', ''
         err <~ async.each tasks, (t, cb) -> t.save-url-to-disk cb
         return cb err
@@ -172,7 +173,7 @@ class Extractenator9000
         rules = obj.stylesheet.rules
             |> filter (.import)
             |> compact
-            |> filter (rule) -> rule.import.indexOf('url(') != -1
+            |> filter (rule) -> URL_PATTERN.test rule.import
         tasks = rules.map (it) -> new ImportTask t.resolved, it, '', ''
         err <~ async.each tasks, (t, cb) -> t.save-url-to-disk cb
         return cb err
