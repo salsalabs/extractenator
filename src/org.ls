@@ -1,5 +1,4 @@
 export class Org
-    uri: 'http://rarediseases.org/get-involved/join/become-member/'
-    dir: '/o/51076/images/20992/'
-    tag-selector: '.col-lg-8'
-
+    uri: 'http://www.ccgb.org/CCGB/'
+    dir: 'o/51348/images/20232/'
+    tag-selector: '#main-wrapper'
