@@ -4,16 +4,10 @@ require! './config'
 require! css
 fs = require 'fs-extra'
 require! path
-{compact, each, filter, flatten, head, map, reject} = require 'prelude-ls'
+{compact, each, filter, flatten, head, map, reject, replace} = require 'prelude-ls'
 require! request
 require! url
 {Org} = require './org'
-
-URL_PATTERN = //
-    (.*url\(['"]*)
-    (http.+?)
-    (['"]*\).*)
-//
 
 org = new Org()
 
@@ -93,7 +87,12 @@ class Task
 
 class DeclTask extends Task
     get-original: ->
-        @matches = URL_PATTERN.exec @elem.value
+        pattern = //
+            (.*url\(['"]*)
+            (.+?)
+            (['"]*\).*)
+            //
+        @matches = pattern.exec @elem.value
         @original = @matches[2]
 
     store-filename: ->
@@ -114,17 +113,17 @@ class HtmlTask extends Task
 
 class ImportTask extends Task
     get-original: ->
-        @matches = URL_PATTERN.exec @elem.import
+        pattern = /^(.*url\(['"]*)(.+?)(['"]*\).*)/
+        @matches = pattern.exec @elem.import
         @original = @matches[2]
-
     store-filename: ->
-        @parts[2] = "#{@filename or @resolved}"
-        @elem.import = @parts .slice 1 .join ''
+        @matches[2] = "#{@filename or @resolved}"
+        @elem.import = @matches .slice 1 .join ''
 
 class Extractenator9000
     not-useful: (t) ->
         switch t.tag
-            | 'css-embedded' => false
+            | 'style' => false
             | otherwise
                 not t.original?
                 or not t.resolved?
@@ -137,12 +136,12 @@ class Extractenator9000
         $ 'a' .each -> task-list.push new FileTask org.uri, $(this), 'anchor', 'href'
         $ 'script[src*=js]' .each -> task-list.push new FileTask org.uri, $(this), 'script', 'src'
         $ 'img:not([src^=data])' .each -> task-list.push new FileTask org.uri, $(this), 'img', 'src'
+        $ 'link:not([rel=stylesheet])' .each -> task-list.push new FileTask org.uri, $(this), 'img', 'href'
         $ 'link[rel=stylesheet]' .each -> task-list.push new FileTask org.uri, $(this), 'css', 'href'
         $ 'style[type*=css]' .each -> task-list.push new FileTask org.uri, $(this), 'style', ''
         reject @not-useful, task-list
         
     process-css-buffer: (t, body, cb) ->
-        console.log "process-css-buffer: #{t.to-string!}"
         obj = css.parse body.toString!, silent: true, source: t.referer
         return cb null unless obj.stylesheet?
         return cb null unless obj.stylesheet.rules?
@@ -164,7 +163,7 @@ class Extractenator9000
             |> map (.declarations)
             |> flatten
             |> compact
-            |> filter (declaration) -> URL_PATTERN.test declaration.value
+            |> filter (declaration) -> /url/.test declaration.value
         tasks = decls.map (it) -> new DeclTask t.resolved, it, '', ''
         err <~ async.each tasks, (t, cb) -> t.save-url-to-disk cb
         return cb err
@@ -173,7 +172,7 @@ class Extractenator9000
         rules = obj.stylesheet.rules
             |> filter (.import)
             |> compact
-            |> filter (rule) -> URL_PATTERN.test rule.import
+            |> filter (rule) -> rule.import.indexOf('url(') != -1
         tasks = rules.map (it) -> new ImportTask t.resolved, it, '', ''
         err <~ async.each tasks, (t, cb) -> t.save-url-to-disk cb
         return cb err
@@ -187,24 +186,30 @@ class Extractenator9000
 
     process-task-list: (t, cb) ~>
         switch t.tag
-            | 'anchor' => t.store-filename!; cb null
-            | 'style' => @process-style-task t, cb
-            | 'css' => @process-css-file-task t, cb
+            | \anchor => t.store-filename!; cb null
+            | \style => @process-style-task t, cb
+            | \css => @process-css-file-task t, cb
             | otherwise => t.save-url-to-disk cb
       
     run: (cb) ->
         t = new HtmlTask org.uri, '', '', ''
         err, body <~ t.read-resolved
         return cb err if err?
-        $ = cheerio.load body.toString 'utf-8'
+        body2 = body.to-string!
+            .replace(/\&apos;/gm, '"')
+            .replace(/@/gm, "\n    @")
+            .replace(/<\!--.+?-->/gm, '')
+            .replace(/<\!--.+?-->/gm, '')
+        $ = cheerio.load body2.toString 'utf-8'
         e = $ org.tag-selector
         switch e.length
         | 0 => return cb "tag selector '#{org.tag-selector}' does not indentify a node."
         | 1 =>
         | otherwise => return cb console.log "tag selector '#{org.tag-selector}' identifies #{e.length} nodes, must only identify one."
 
-        e.after config.TEMPLATE_TAGS .remove!
+        e.empty! .append config.TEMPLATE_TAGS
         task-list = @load-task-list $
+        console.log "run: task list contains #{task-list.length} tasks"
         err <~ async.each task-list, @process-task-list
         console.log "run: process-task-list returned err", err
         return cb err if err?
