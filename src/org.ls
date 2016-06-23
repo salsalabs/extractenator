@@ -1,4 +1,5 @@
 export class Org
-    uri: 'http://www.ccgb.org/CCGB/'
-    dir: '/o/51348/images/20232/'
-    tag-selector: '#main-wrapper'
+    uri: 'http://projectchimps.org/donate/'
+    filename: null
+    dir: '/o/51566/images/20267/'
+    tag-selector: '#post-103'
