@@ -48,6 +48,7 @@ class Task
     read-resolved: (cb) ~>
         # console.log "read-resolved: #{@to-string!} null resolved #{not resolved?}"
         return cb null, null unless @resolved?
+        return cb null, null if @resolved.indexOf('data:' ) != -1
         (err, resp, body) <~ @request @resolved
         return cb err if err?
 
@@ -142,6 +143,7 @@ class Extractenator9000
         reject @not-useful, task-list
         
     process-css-buffer: (t, body, cb) ->
+        # console.log "process-css-buffer: #{t.to-string!}"
         obj = css.parse body.toString!, silent: true, source: t.referer
         return cb null unless obj.stylesheet?
         return cb null unless obj.stylesheet.rules?
@@ -152,6 +154,7 @@ class Extractenator9000
         cb null, css.stringify obj
 
     process-css-file-task: (t, cb) ~>
+        # console.log "process-css-file: #{t.to-string!}"
         (err, body) <~ t.read-resolved
         return cb err if err?
         (err, body) <~ @process-css-buffer t, body
@@ -159,6 +162,7 @@ class Extractenator9000
         t.save-buffer-to-disk body, cb
 
     process-decl-list: (t, obj, cb) ->
+        # console.log "process-css-file: #{t.to-string!}"
         decls = obj.stylesheet.rules
             |> map (.declarations)
             |> flatten
@@ -185,25 +189,36 @@ class Extractenator9000
         cb null
 
     process-task-list: (t, cb) ~>
+        # console.log "process-task-list: original is" t.original
         switch t.tag
             | \anchor => t.store-filename!; cb null
             | \style => @process-style-task t, cb
             | \css => @process-css-file-task t, cb
             | otherwise => t.save-url-to-disk cb
-      
+
+    read-html: (t, cb) ->      
+        if org.filename?
+            err, body <~ fs.readFile org.filename, encoding: \utf8
+            console.log "run: retrieved #{body.length} bytes from #{org.filename}"
+            cb err, body
+        else
+            err, body <~ t.read-resolved
+            console.log "run: retrieved #{body.length} bytes from #{org.uri}"
+            cb err, body
+
     run: (cb) ->
         t = new HtmlTask org.uri, '', '', ''
-        err, body <~ t.read-resolved
+        (err, body) <~ @read-html t
         return cb err if err?
-        body2 = body.to-string!
-            .replace(/\&apos;/gm, '"')
-            .replace(/@/gm, "\n    @")
-            .replace(/<\!--.+?-->/gm, '')
-            .replace(/<\!--.+?-->/gm, '')
-        $ = cheerio.load body2.toString 'utf-8'
+        # body2 = body.to-string!
+            # .replace(/\&apos;/gm, '"')
+            # .replace(/@/gm, "\n    @")
+            # .replace(/<\!--.+?-->/gm, '')
+            # .replace(/<\!--.+?-->/gm, '')
+        $ = cheerio.load body.to-string!, 'utf-8'
         e = $ org.tag-selector
         switch e.length
-        | 0 => return cb "tag selector '#{org.tag-selector}' does not indentify a node."
+        | 0 => return cb "tag selector '#{org.tag-selector}' does not indentify a node"
         | 1 =>
         | otherwise => return cb console.log "tag selector '#{org.tag-selector}' identifies #{e.length} nodes, must only identify one."
 
