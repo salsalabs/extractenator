@@ -1,5 +1,5 @@
 export class Org
-    uri: 'http://projectchimps.org/donate/'
+    uri: 'http://www.aapcho.org/'
     filename: null
-    dir: '/o/51566/images/20267/'
-    tag-selector: '#post-103'
+    dir: '/o/51215/images/20276/'
+    tag-selector: '#mission-statement'
