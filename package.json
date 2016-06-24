@@ -9,15 +9,16 @@
     "url": ""
   },
   "scripts": {
-    "prebuild": "coffee --bare --compile --output lib src",
+    "prebuild": "lsc --bare --compile --output lib src",
     "build": "npm shrinkwrap; npm pack",
-    "preinstall": "coffee --bare --compile --output lib src",
+    "preinstall": "lsc --bare --compile --output lib src",
     "codo": "rm -rf doc; codo . --title 'The Extractenator.'",
     "local-server": "http-server",
     "watch": "lsc -c -d -w -o lib src/*.ls &"
   },
   "dependencies": {
     "async": "*",
+    "cheerio": "*",
     "commander": "*",
     "css": "*",
     "fs-extra": "*",
