@@ -1,5 +1,5 @@
 export class Org
-    uri: 'http://ccp.onedaybuilds.com/what-you-can-do/'
+    uri: 'http://www.cleanairpa.org'
     filename: null
-    dir: 'o/50901/images/20319/'
-    tag-selector: '.container_wrap_first'
+    dir: '/o/51176/images/20333/'
+    tag-selector: '.twocolumn-container'
