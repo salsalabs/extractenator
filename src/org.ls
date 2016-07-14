@@ -1,5 +1,5 @@
 export class Org
-    uri: 'http://www.cleanairpa.org'
+    uri: 'http://cvidaho.org/2609-2/'
     filename: null
-    dir: '/o/51176/images/20333/'
-    tag-selector: '.twocolumn-container'
+    dir: '/o/51180/images/20369/'
+    tag-selector: '#content'
