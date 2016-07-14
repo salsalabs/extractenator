@@ -46,9 +46,9 @@ class Task
     get-html: -> @elem.html!
 
     read-resolved: (cb) ~>
-        # console.log "read-resolved: #{@to-string!} null resolved #{not resolved?}"
+        # console.log "read-resolved: #{@to-string!} null resolved #{not @resolved?}"
         return cb null, null unless @resolved?
-        return cb null, null if @resolved.indexOf('data:' ) != -1
+        return cb null, null if @resolved.indexOf('data:') != -1
         (err, resp, body) <~ @request @resolved
         return cb err if err?
 
@@ -78,6 +78,7 @@ class Task
         # console.log "save-url-to-disk: saving #(@content-type} #{@to-string!} to disk"
         err, body <~ @read-resolved
         return cb err if err?
+        return cb null unless body?
         err <~ @save-buffer-to-disk body
         cb err
 
@@ -157,6 +158,7 @@ class Extractenator9000
         # console.log "process-css-file: #{t.to-string!}"
         (err, body) <~ t.read-resolved
         return cb err if err?
+        return cb null unless body?
         (err, body) <~ @process-css-buffer t, body
         return cb err if err?
         t.save-buffer-to-disk body, cb
@@ -203,6 +205,7 @@ class Extractenator9000
             cb err, body
         else
             err, body <~ t.read-resolved
+            return cb err, body unless body?
             console.log "run: retrieved #{body.length} bytes from #{org.uri}"
             cb err, body
 
