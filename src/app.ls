@@ -152,7 +152,11 @@ class Extractenator9000
         return cb err if err?
         err <~ @process-import-list t, obj
         return cb err if err?
-        cb null, css.stringify obj
+        try
+            return cb null, css.stringify obj
+        catch thrown
+            console.log "process-css-buffer: css.stringify error #{thrown}"
+        cb null, null
 
     process-css-file-task: (t, cb) ~>
         # console.log "process-css-file: #{t.to-string!}"
@@ -161,6 +165,7 @@ class Extractenator9000
         return cb null unless body?
         (err, body) <~ @process-css-buffer t, body
         return cb err if err?
+        return cb null unless body?
         t.save-buffer-to-disk body, cb
 
     process-decl-list: (t, obj, cb) ->
@@ -175,6 +180,7 @@ class Extractenator9000
         return cb err
 
     process-import-list: (t, obj, cb) ->
+        return cb null unless obj?
         rules = obj.stylesheet.rules
             |> filter (.import)
             |> compact
@@ -187,6 +193,7 @@ class Extractenator9000
         # console.log "process-style-task: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS, \n#{t.elem.html!}\n"
         (err, body) <- @process-css-buffer t, t.get-html!
         return cb err if err?
+        return cb null unless body?
         t.set-html body
         cb null
 
