@@ -1,5 +1,5 @@
 export class Org
-    uri: 'http://healthydemocracy.org/'
+    uri: 'http://www.cfra.org/'
     filename: null
-    dir: '/o/50916/images/20343/'
-    tag-selector: '#home-page-divider'
+    dir: '/o/2715/images/15500/'
+    tag-selector: '.abovefold-inner'
