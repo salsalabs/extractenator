@@ -1,5 +1,5 @@
 export class Org
-    uri: 'http://www.cfra.org/'
+    uri: 'http://www.criticalexposure.org/sponsors'
     filename: null
-    dir: '/o/2715/images/15500/'
-    tag-selector: '.abovefold-inner'
+    dir: '/o/50914/images/21069/'
+    tag-selector: '#main-content'
