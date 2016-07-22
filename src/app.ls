@@ -155,7 +155,7 @@ class Extractenator9000
         try
             return cb null, css.stringify obj
         catch thrown
-            console.log "process-css-buffer: css.stringify error #{thrown}"
+            console.log "process-css-buffer: caught css.stringify error #{thrown}"
         cb null, null
 
     process-css-file-task: (t, cb) ~>
