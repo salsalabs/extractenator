@@ -1,5 +1,5 @@
 export class Org
-    uri: 'http://www.criticalexposure.org/sponsors'
+    uri: 'http://facespayneuter.org/'
     filename: null
-    dir: '/o/50914/images/21069/'
-    tag-selector: '#main-content'
+    dir: '/o/51324/images/20386/'
+    tag-selector: '#home-contain > div:nth-child(1)'
