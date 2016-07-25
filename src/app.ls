@@ -50,7 +50,9 @@ class Task
         return cb null, null unless @resolved?
         return cb null, null if @resolved.indexOf('data:') != -1
         (err, resp, body) <~ @request @resolved
-        return cb err if err?
+        if err?
+            console.log "read-resolved caught #{err} on #{@resolved}"
+            return cb null, null
 
         @status-code = resp.statusCode
         @content-type = resp.headers.'content-type'
@@ -80,7 +82,8 @@ class Task
         return cb err if err?
         return cb null unless body?
         err <~ @save-buffer-to-disk body
-        cb err
+        console.log "save-url-to-disk: caught error #{err} while saving #{@resolved}"
+        cb null
 
     set-html: (body) ->@elem.html body
 
