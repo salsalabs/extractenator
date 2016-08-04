@@ -82,7 +82,7 @@ class Task
         return cb err if err?
         return cb null unless body?
         err <~ @save-buffer-to-disk body
-        console.log "save-url-to-disk: caught error #{err} while saving #{@resolved}"
+        console.log "save-url-to-disk: caught error #{err} while saving #{@resolved}" if err?
         cb null
 
     set-html: (body) ->@elem.html body
