@@ -1,5 +1,5 @@
 export class Org
-    uri: 'http://facespayneuter.org/'
+    uri: 'http://www.coloradokids.org/about/board/'
     filename: null
-    dir: '/o/51354/images/20387/'
-    tag-selector: '#home-contain > div:nth-child(1)'
+    dir: '/o/50897/images/20388/'
+    tag-selector: '.entry-content'
