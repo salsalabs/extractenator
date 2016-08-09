@@ -1,5 +1,5 @@
 export class Org
-    uri: 'http://facespayneuter.org/'
+    uri: 'http://pluginamerica.staging.wpengine.com/blank/'
     filename: null
-    dir: '/o/51354/images/20422/'
-    tag-selector: '#home-contain > div:nth-child(1)'
+    dir: '/o/2711/images/15510/'
+    tag-selector: '.entry'
