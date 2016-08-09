@@ -238,7 +238,7 @@ class Extractenator9000
         e.empty! .append config.TEMPLATE_TAGS
         task-list = @load-task-list $
         console.log "run: task list contains #{task-list.length} tasks"
-        err <~ async.each task-list, @process-task-list
+        err <- async.each task-list, @process-task-list
         console.log "run: process-task-list returned err", err
         return cb err if err?
         t.save-buffer-to-disk $.html!, cb
