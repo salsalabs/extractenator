@@ -1,5 +1,5 @@
 export class Org
-    uri: 'http://www.pluginamerica.org/about-us'
+    uri: 'http://fundacionlazosdedignidad.org/index.html'
     filename: null
-    dir: '/o/2711/images/15515/'
-    tag-selector: '#indented'
+    dir: '/o/7315/images/19832/'
+    tag-selector: '.slider-container'
