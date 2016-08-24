@@ -1,5 +1,5 @@
 export class Org
-    uri: 'http://www.asm.org/index.php/position-statements-and-testimony'
+    uri: 'http://www.pluginamerica.org/about-us'
     filename: null
-    dir: '/o/51576/images/20450/'
-    tag-selector: '.item-page'
+    dir: '/o/2711/images/15515/'
+    tag-selector: '#indented'
