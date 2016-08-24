@@ -1,5 +1,5 @@
 export class Org
-    uri: 'http://fundacionlazosdedignidad.org/index.html'
+    uri: 'http://www.rawhide.org/buffalo-wild-wings-fundraisers/'
     filename: null
-    dir: '/o/7315/images/19832/'
-    tag-selector: '.slider-container'
+    dir: '/o/51635/images/20483/'
+    tag-selector: '#content'
