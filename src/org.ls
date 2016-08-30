@@ -1,5 +1,5 @@
 export class Org
-    uri: 'http://www.atelierwaydesign.com/div/blank/'
+    uri: 'http://paipl.us/shop/'
     filename: null
-    dir: '/o/51575/images/20502/'
-    tag-selector: '.et_pb_text_1'
+    dir: '/o/50836/images/20486/'
+    tag-selector: '#main'
