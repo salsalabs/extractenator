@@ -1,5 +1,5 @@
 export class Org
-    uri: 'http://bridgeportfarmersmarkets.org/'
-    filename: 'index.html'
-    dir: '/o/51348/images/20525/'
-    tag-selector: '#content'
+    uri: 'http://www.catholicsforchoice.org/jon-obrien/'
+    filename: null
+    dir: '/o/5132/images/19859/'
+    tag-selector: '#main'
