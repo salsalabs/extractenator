@@ -1,5 +1,5 @@
 export class Org
-    uri: 'http://www.catholicsforchoice.org/jon-obrien/'
+    uri: 'http://homesforall.org/renters-day-of-action/'
     filename: null
-    dir: '/o/5132/images/19859/'
-    tag-selector: '#main'
+    dir: '/o/50109/images/21139/'
+    tag-selector: '#content_left'
