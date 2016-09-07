@@ -98,9 +98,15 @@ class DeclTask extends Task
             (['"]*\).*)
             //
         @matches = pattern.exec @elem.value
+        unless @matches?.length > 2
+            console.log "DeclTask.get-original: Match for url #{@elem.value} in #{@resolved} is null!"
+            return
         @original = @matches[2]
 
     store-filename: ->
+        unless @matches?.length > 2
+            console.log "DeclTask.store-filename: Match for url #{@elem.value} in #{@resolved} is null!"
+            return
         @matches[2] = "#{@filename or @resolved}"
         @elem.value = @matches .slice 1 .join ''
 
@@ -120,8 +126,14 @@ class ImportTask extends Task
     get-original: ->
         pattern = /^(.*url\(['"]*)(.+?)(['"]*\).*)/
         @matches = pattern.exec @elem.import
+        unless @matches?.length > 2
+            console.log "ImportTask.get-original: Match for url #{@elem.value} in #{@resolved} is null!"
+            return
         @original = @matches[2]
     store-filename: ->
+        unless @matches?.length > 2
+            console.log "ImportTask.store-filename: Match for url #{@elem.value} in #{@resolved} is null!"
+            return
         @matches[2] = "#{@filename or @resolved}"
         @elem.import = @matches .slice 1 .join ''
 
