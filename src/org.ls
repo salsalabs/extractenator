@@ -1,5 +1,5 @@
 export class Org
-    uri: 'http://www.stopcorporateabuse.org/about-us'
-    filename: "CAI.html"
-    dir: '/o/2215/images/15529/'
-    tag-selector: '#main'
+    uri: 'https://prairierivers.org/blog/'
+    filename: null
+    dir: '/o/50771/images/20560/'
+    tag-selector: '.content_post'
