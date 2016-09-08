@@ -1,5 +1,5 @@
 export class Org
-    uri: 'http://homesforall.org/renters-day-of-action/'
-    filename: 'hfa.html'
-    dir: '/o/50109/images/21139/'
-    tag-selector: '#content_left'
+    uri: 'http://www.stopcorporateabuse.org/about-us'
+    filename: "CAI.html"
+    dir: '/o/2215/images/15529/'
+    tag-selector: '#main'
