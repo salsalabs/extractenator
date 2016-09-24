@@ -1,5 +1,5 @@
 export class Org
-    uri: 'https://prairierivers.org/blog/'
+    uri: 'https://www.oregonfoodbank.org/our-work/public-policy/'
     filename: null
-    dir: '/o/50771/images/20560/'
-    tag-selector: '.content_post'
+    dir: '/o/51607/images/21177/'
+    tag-selector: '#post-13308'
