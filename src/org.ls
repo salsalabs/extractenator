@@ -1,5 +1,5 @@
 export class Org
-    uri: 'https://www.oregonfoodbank.org/our-work/public-policy/'
+    uri: 'http://rcrc.org/press/'
     filename: null
-    dir: '/o/51607/images/21177/'
-    tag-selector: '#post-13308'
+    dir: '/o/50162/images/21207/'
+    tag-selector: '#main'
