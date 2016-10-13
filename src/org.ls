@@ -1,5 +1,5 @@
 export class Org
-    uri: 'https://www.oregonfoodbank.org/our-work/public-policy/'
+    uri: 'http://fpwa.org/'
     filename: null
-    dir: '/o/51067/images/21221/'
-    tag-selector: '#post-13308'
+    dir: '/o/6584/images/15398/'
+    tag-selector: '#main'
