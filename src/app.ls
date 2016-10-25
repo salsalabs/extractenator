@@ -10,6 +10,7 @@ require! url
 {Org} = require './org'
 
 org = new Org()
+DUMP_TASKS = false
 
 class Task
     (@referer, @elem, @tag, @attr) ->
@@ -18,7 +19,7 @@ class Task
         @status-code = null
         @filename = null
 
-        @get-original!        
+        @get-original!
         return unless @original?
         return if @original instanceof Object
         @resolved = url.resolve @referer, @original unless url.parse @original .protocol?
@@ -51,7 +52,7 @@ class Task
         return cb null, null if @resolved.indexOf('data:') != -1
         (err, resp, body) <~ @request @resolved
         if err?
-            console.log "read-resolved caught #{err} on #{@resolved}"
+            console.log "read-resolved: #{err} on #{@resolved}"
             return cb null, null
 
         @status-code = resp.statusCode
@@ -82,13 +83,24 @@ class Task
         return cb err if err?
         return cb null unless body?
         err <~ @save-buffer-to-disk body
-        console.log "save-url-to-disk: caught error #{err} while saving #{@resolved}" if err?
+        console.log "save-url-to-disk: error #{err} while saving #{@resolved}" if err?
         cb null
 
     set-html: (body) ->@elem.html body
 
-    to-string: ->
-        "#{@tag} #{@attr} #{@resolved} #{@filename}"
+    to-string: -> 
+        switch DUMP_TASKS
+            | true => JSON.stringify do
+                inputs:
+                    referer: @referer
+                    # elem: @elem
+                    tag: @tag
+                    attr: @attr
+                derived:
+                    resolved: @resolved
+                    filename: @filename
+                ,null, 4
+            | false => "#{@tag} #{@attr} #{@resolved} #{@filename}"
 
 class DeclTask extends Task
     get-original: ->
@@ -111,7 +123,9 @@ class DeclTask extends Task
         @elem.value = @matches .slice 1 .join ''
 
 class FileTask extends Task
-    get-original: -> @original = @elem.attr @attr
+    get-original: -> @original = switch @attr .length
+        | 0 => null
+        | otherwise => @elem.attr @attr
     store-filename: -> @elem.attr @attr, "#{@filename or @resolved}"
 
 class HtmlTask extends Task
@@ -150,12 +164,12 @@ class Extractenator9000
 
     load-task-list: ($) ->
         task-list = []
-        $ 'a' .each -> task-list.push new FileTask org.uri, $(this), 'anchor', 'href'
-        $ 'script[src*=js]' .each -> task-list.push new FileTask org.uri, $(this), 'script', 'src'
-        $ 'img:not([src^=data])' .each -> task-list.push new FileTask org.uri, $(this), 'img', 'src'
-        $ 'link:not([rel=stylesheet])' .each -> task-list.push new FileTask org.uri, $(this), 'img', 'href'
-        $ 'link[rel=stylesheet]' .each -> task-list.push new FileTask org.uri, $(this), 'css', 'href'
-        $ 'style[type*=css]' .each -> task-list.push new FileTask org.uri, $(this), 'style', ''
+        $ 'a' .each -> task-list.push new FileTask org.uri, $(this), \anchor, \href
+        $ 'script[src*=js]' .each -> task-list.push new FileTask org.uri, $(this), \script, \src
+        $ 'img:not([src^=data])' .each -> task-list.push new FileTask org.uri, $(this), \img, \src
+        $ 'link:not([rel=stylesheet])' .each -> task-list.push new FileTask org.uri, $(this), \img, \href
+        $ 'link[rel=stylesheet]' .each -> task-list.push new FileTask org.uri, $(this), \css, \href
+        $ 'style[type*=css]' .each -> task-list.push new FileTask org.uri, $(this), \style, ''
         reject @not-useful, task-list
         
     process-css-buffer: (t, body, cb) ->
@@ -174,7 +188,9 @@ class Extractenator9000
         cb null, null
 
     process-css-file-task: (t, cb) ~>
-        # console.log "process-css-file: #{t.to-string!}"
+        unless t.resolved?
+            console.log "process-css-file-task: Not saving embedded CSS in this version."
+            return cb null
         (err, body) <~ t.read-resolved
         return cb err if err?
         return cb null unless body?
@@ -184,7 +200,8 @@ class Extractenator9000
         t.save-buffer-to-disk body, cb
 
     process-decl-list: (t, obj, cb) ->
-        # console.log "process-css-file: #{t.to-string!}"
+        return cb null unless t.resolved?
+        # console.log "process-decl-list: #{t.to-string!}"
         decls = obj.stylesheet.rules
             |> map (.declarations)
             |> flatten
@@ -205,7 +222,7 @@ class Extractenator9000
         return cb err
 
     process-style-task: (t, cb) ->
-        # console.log "process-style-task: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS, \n#{t.elem.html!}\n"
+        console.log "process-style-task: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS, \n#{t.elem.html!}\n"
         (err, body) <- @process-css-buffer t, t.get-html!
         return cb err if err?
         return cb null unless body?
@@ -213,7 +230,6 @@ class Extractenator9000
         cb null
 
     process-task-list: (t, cb) ~>
-        # console.log "process-task-list: original is" t.original
         switch t.tag
             | \anchor => t.store-filename!; cb null
             | \style => @process-style-task t, cb
@@ -251,7 +267,7 @@ class Extractenator9000
         task-list = @load-task-list $
         console.log "run: task list contains #{task-list.length} tasks"
         err <- async.each task-list, @process-task-list
-        console.log "run: process-task-list returned err", err
+        console.log "run: process-task-list returned err", err if err?
         return cb err if err?
         t.save-buffer-to-disk $.html!, cb
 
