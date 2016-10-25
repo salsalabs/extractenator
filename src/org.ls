@@ -1,5 +1,5 @@
 export class Org
-    uri: 'http://fpwa.org/embed/'
+    uri: 'http://mdenergyforall.org/donate/'
     filename: null
-    dir: '/o/6584/images/15398/'
-    tag-selector: '#main'
+    dir: '/o/5502/images/19917/'
+    tag-selector: '.et_pb_text_1'
