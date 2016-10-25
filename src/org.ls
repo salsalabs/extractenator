@@ -1,5 +1,5 @@
 export class Org
-    uri: 'http://mdenergyforall.org/donate/'
+    uri: 'https://www.adk.org/'
     filename: null
-    dir: '/o/5502/images/19917/'
-    tag-selector: '.et_pb_text_1'
+    dir: '/o/51116/images/20730/'
+    tag-selector: '#main'
