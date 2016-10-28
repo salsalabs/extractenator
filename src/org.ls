@@ -1,7 +1,7 @@
 export class Org
-    name: 'IAHV'
-    uri: 'http://www.iahv.org/us-en/contact/'
+    name: 'MEDA'
+    uri: 'http://mdenergyforall.org/donate/'
     filename: null
-    dir: '/o/51533/images/20744/'
-    tag-selector: '#content'
+    dir: '/o/5502/images/19917/'
+    tag-selector: '.et_pb_text_1'
 
