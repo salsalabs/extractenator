@@ -1,5 +1,7 @@
 export class Org
-    uri: 'https://www.adk.org/'
+    name: 'IAHV'
+    uri: 'http://www.iahv.org/us-en/contact/'
     filename: null
-    dir: '/o/51116/images/20730/'
-    tag-selector: '#main'
+    dir: '/o/51533/images/20744/'
+    tag-selector: '#content'
+
