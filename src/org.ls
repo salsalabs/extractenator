@@ -1,7 +1,7 @@
 export class Org
-    name: 'MEDA'
-    uri: 'http://mdenergyforall.org/donate/'
+    name: 'Riders First'
+    uri: 'http://ridersfirst.org/'
     filename: null
-    dir: '/o/5502/images/19917/'
-    tag-selector: '.et_pb_text_1'
+    dir: '/o/51461/images/20745/'
+    tag-selector: 'div.col-sm-offset-1:nth-child(2)'
 
