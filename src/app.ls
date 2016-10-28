@@ -222,7 +222,7 @@ class Extractenator9000
         return cb err
 
     process-style-task: (t, cb) ->
-        console.log "process-style-task: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS, \n#{t.elem.html!}\n"
+        # console.log "process-style-task: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS, \n#{t.elem.html!}\n"
         (err, body) <- @process-css-buffer t, t.get-html!
         return cb err if err?
         return cb null unless body?
