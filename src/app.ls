@@ -101,7 +101,6 @@ class DeclTask extends Task
             (['"]*\).*)
             //
         @matches = pattern.exec @elem.value
-        console.log "DeclTask.get-original: @elem.value", @elem.value,"matches", @matches
         @original = @matches[2]
 
     store-filename: ->
