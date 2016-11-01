@@ -1,7 +1,6 @@
 export class Org
-    name: 'Riders First'
-    uri: 'http://ridersfirst.org/'
+    name: "ADK"
+    uri: 'https://www.adk.org/'
     filename: null
-    dir: '/o/51461/images/20745/'
-    tag-selector: 'div.col-sm-offset-1:nth-child(2)'
-
+    dir: '/o/51116/images/20730/'
+    tag-selector: '#main'
