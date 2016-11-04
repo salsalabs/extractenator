@@ -1,6 +1,6 @@
 export class Org
-    name: "ADK"
-    uri: 'https://www.adk.org/'
+    name: "CCA"
+    uri: 'http://mo.childcareaware.org/action-info-center/'
     filename: null
-    dir: '/o/51116/images/20759/'
-    tag-selector: '#main'
+    dir: '/o/51575/images/20783/'
+    tag-selector: '.template-overlap'
