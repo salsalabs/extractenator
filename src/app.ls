@@ -101,9 +101,11 @@ class DeclTask extends Task
             (['"]*\).*)
             //
         @matches = pattern.exec @elem.value
-        @original = @matches[2]
+        return console.log "DeclTask.get-original: cannot match '#{@elem.value}', skipping." unless @matches?
+        @original = @matches[2] if @matches.length > 2
 
     store-filename: ->
+        return unless @matches? and @matches.length > 2
         @matches[2] = "#{@filename or @resolved}"
         @elem.value = @matches .slice 1 .join ''
 
@@ -124,6 +126,7 @@ class ImportTask extends Task
         pattern = /^(.*url\(['"]*)(.+?)(['"]*\).*)/
         @matches = pattern.exec @elem.import
         @original = @matches[2]
+
     store-filename: ->
         @matches[2] = "#{@filename or @resolved}"
         @elem.import = @matches .slice 1 .join ''
