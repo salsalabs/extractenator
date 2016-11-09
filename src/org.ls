@@ -1,6 +1,6 @@
 export class Org
-    name: "CCA"
-    uri: 'http://mo.childcareaware.org/action-info-center/'
+    name: "COSEIA"
+    uri: 'http://coseia.org/about/staff-board/'
     filename: null
-    dir: '/o/51575/images/20783/'
-    tag-selector: '.template-overlap'
+    dir: '/o/50528/images/21268/'
+    tag-selector: 'div.container_wrap:nth-child(2) > div:nth-child(1)'
