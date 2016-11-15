@@ -1,6 +1,6 @@
 export class Org
-    name: "ASM"
-    uri: 'https://www.asm.org/index.php/about-the-american-society-for-microbiology'
+    name: "AACTE"
+    uri: 'http://aacte.org/policy-and-advocacy/advocacy-center'
     filename: null
-    dir: '/o/51576/images/20813/'
-    tag-selector: 'div.item-page'
+    dir: '/o/51623/images/20816/'
+    tag-selector: 'div.category-list'
