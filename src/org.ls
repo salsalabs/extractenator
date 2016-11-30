@@ -1,6 +1,7 @@
 export class Org
-    name: "KSWild"
-    uri: 'https://siskiyoufilmfest2017.squarespace.com/films/'
+    name: "TPIN-IMTImpact"
+    uri: 'http://www.weareimpact.org/job.html'
     filename: null
-    dir: '/o/5632/images/19995/'
-    tag-selector: '#page-582b8586be65948271067c42'
+    # See http://screencast.com/t/9TNH4PQh8Pth for a sample image URL for this chapter.
+    dir: 'c/446/images/12699/'
+    tag-selector: 'main.main'
