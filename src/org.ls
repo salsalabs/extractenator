@@ -1,6 +1,6 @@
 export class Org
-    name: "SAC"
-    uri: 'http://southernaidscoalition.org/contact-us/'
+    name: "ELCBroward"
+    uri: 'http://www.elcbroward.org/p/56/legislative-corner'
     filename: null
-    dir: '/o/51446/images/20929/'
-    tag-selector: '#content'
+    dir: '/o/51575/c/535/images/20929/'
+    tag-selector: '#PrimaryContent'
