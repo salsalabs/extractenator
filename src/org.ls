@@ -1,6 +1,6 @@
 export class Org
-    name: "IDAEYC"
-    uri: 'http://idahoaeyc.org/advocacy.php'
+    name: "SAC"
+    uri: 'http://southernaidscoalition.org/contact-us/'
     filename: null
-    dir: '/o/51575/c/536/images/20925/'
-    tag-selector: 'div.col-sm-7:nth-child(2)'
+    dir: '/o/51446/images/20929/'
+    tag-selector: '#content'
