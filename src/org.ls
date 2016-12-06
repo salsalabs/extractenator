@@ -1,6 +1,6 @@
 export class Org
-    name: "LadyParts"
-    uri: 'http://ladypartsjusticeleague.com/cycleofgiving/'
+    name: "IDAEYC"
+    uri: 'http://idahoaeyc.org/advocacy.php'
     filename: null
-    dir: '/c/423/images/20900/'
-    tag-selector: 'div.et_pb_row:nth-child(1)'
+    dir: '/c/536/images/20924/'
+    tag-selector: 'div.col-sm-7:nth-child(2)'
