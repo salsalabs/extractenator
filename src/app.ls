@@ -1,5 +1,5 @@
-require! async
 require! cheerio
+require! async
 require! './config'
 require! css
 fs = require 'fs-extra'
@@ -12,6 +12,7 @@ require! url
 org = new Org()
 
 class Task
+    @serial-number = 0
     (@referer, @elem, @tag, @attr) ->
         @resolved = null
         @content-type = null
@@ -36,8 +37,9 @@ class Task
 
     get-basename: ->
         basename = (path.basename @resolved .split '?')[0]
-        return 'index.html' unless path.extname basename .length > 0
-        basename
+        return basename if path.extname basename .length > 0
+        extension = @content-type .split '/' .0
+        return "#{basename || ++@@serial_number}.#{extension}"
 
     get-directory: ->
         | /image\//.test @content-type => \image
@@ -110,7 +112,7 @@ class DeclTask extends Task
         @elem.value = @matches .slice 1 .join ''
 
 class FileTask extends Task
-    get-original: -> @original = @elem.attr @attr
+    get-original: -> @original = @elem.attr @attr; console.log "FileTask.get-original: attr #{@attr} value is #{@elem.attr @attr}"
     store-filename: -> @elem.attr @attr, "#{@filename or @resolved}"
 
 class HtmlTask extends Task
@@ -133,6 +135,7 @@ class ImportTask extends Task
 
 class Extractenator9000
     not-useful: (t) ->
+        console.log "not-useful: #{url.parse t.original .hostname} in CDN_HOSTS? #{url.parse t.original .hostname in config.CDN_HOSTS}"
         switch t.tag
             | 'style' => false
             | otherwise
@@ -147,9 +150,10 @@ class Extractenator9000
         $ 'a' .each -> task-list.push new FileTask org.uri, $(this), 'anchor', 'href'
         $ 'script[src*=js]' .each -> task-list.push new FileTask org.uri, $(this), 'script', 'src'
         $ 'img:not([src^=data])' .each -> task-list.push new FileTask org.uri, $(this), 'img', 'src'
-        $ 'link:not([rel=stylesheet])' .each -> task-list.push new FileTask org.uri, $(this), 'img', 'href'
+        # https://developer.mozilla.org/en-US/docs/Web/HTML/Link_types
+        $ 'link[rel=icon]' .each -> task-list.push new FileTask org.uri, $(this), 'img', 'href'
         $ 'link[rel=stylesheet]' .each -> task-list.push new FileTask org.uri, $(this), 'css', 'href'
-        $ 'style[type*=css]' .each -> task-list.push new FileTask org.uri, $(this), 'style', ''
+        $ 'style[src!=""]' .each -> task-list.push new FileTask org.uri, $(this), 'style', ''
         reject @not-useful, task-list
         
     process-css-buffer: (t, body, cb) ->
