@@ -35,11 +35,13 @@ class Task
             'Referer': org.uri
             'User-Agent': config.USER_AGENT
 
+    clean-basename: (v) -> v .split /[\?\&\;\#]/ .0
+
     get-basename: ->
         basename = (path.basename @resolved .split '?')[0]
-        return basename if path.extname basename .length > 0
-        extension = @content-type .split '/' .0
-        return "#{basename || ++@@serial_number}.#{extension}"
+        return @clean-basename basename if path.extname basename .length > 0
+        extension = (@content-type .split '/' .1)
+        return @clean-basename "#{basename || ++@@serial_number}.#{extension}"
 
     get-directory: ->
         | /image\//.test @content-type => \image
@@ -135,7 +137,6 @@ class ImportTask extends Task
 
 class Extractenator9000
     not-useful: (t) ->
-        console.log "not-useful: #{url.parse t.original .hostname} in CDN_HOSTS? #{url.parse t.original .hostname in config.CDN_HOSTS}"
         switch t.tag
             | 'style' => false
             | otherwise
