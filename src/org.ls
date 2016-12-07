@@ -1,6 +1,6 @@
 export class Org
-    name: "LadyParts"
-    uri: 'http://ladypartsjusticeleague.com/clinic-outreach/'
+    name: "YWCA"
+    uri: 'http://www.ywcasf-marin.org/who-we-are/mission-vision/'
     filename: null
-    dir: '/o/51595/c/423/images/20936/'
-    tag-selector: '#content-area'
+    dir: '/o/51423/images/20938/'
+    tag-selector: '.main-content'
