@@ -1,6 +1,6 @@
 export class Org
-    name: "UUSJ"
-    uri: 'http://uusj.net/NewSalsaTemplate.html'
+    name: "LadyParts"
+    uri: 'http://ladypartsjusticeleague.com/clinic-outreach/'
     filename: null
-    dir: '/o/50780/images/20934/'
-    tag-selector: '.primary-content'
+    dir: '/o/51595/c/423/images/20936/'
+    tag-selector: '#content-area'
