@@ -1,6 +1,6 @@
 export class Org
-    name: "ELCBroward"
-    uri: 'http://www.elcbroward.org/p/56/legislative-corner'
+    name: "UUSJ"
+    uri: 'http://uusj.net/NewSalsaTemplate.html'
     filename: null
-    dir: '/o/51575/c/535/images/20931/'
-    tag-selector: '#PrimaryContent'
+    dir: '/o/50780/images/20934/'
+    tag-selector: '.primary-content'
