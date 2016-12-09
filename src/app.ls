@@ -25,7 +25,14 @@ class Task
         return if @original instanceof Object
         protocol = url.parse @original .protocol
         @referer = switch @referer | null => org.uri | otherwise => @referer
-        @resolved = url.resolve @referer, @original unless protocol?
+        try
+            @resolved = url.resolve @referer, @original unless protocol?
+        catch thrown
+            console.log "URL.resolve threw #{thrown}"
+            console.log "referer is #{@referer}"
+            console.log "original is #{@original}"
+            console.log "\n"
+            @resolved = null
         @resolved = @original unless @resolved?
  
     request: request.defaults do
