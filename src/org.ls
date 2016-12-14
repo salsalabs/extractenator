@@ -1,6 +1,6 @@
 export class Org
-    name: "UUJMCA"
-    uri: "http://uujmca.org/our-mission/"
+    name: "MSU"
+    uri: "http://earlyyearsnetwork.msucares.com/resources"
     filename: null
-    dir: '/o/51510/c/292/images/20942/'
-    tag-selector: '#content'
+    dir: '/o/51575/c/646/images/20965/'
+    tag-selector: '#main-content'
