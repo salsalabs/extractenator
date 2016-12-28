@@ -1,6 +1,6 @@
 export class Org
     name: "MSU"
-    uri: "http://earlyyearsnetwork.msucares.com/resources"
+    uri: "http://www.womenslawproject.org/board-of-trustees/"
     filename: null
-    dir: '/o/51575/c/646/images/20965/'
-    tag-selector: '#main-content'
+    dir: '/o/50334/images/21323/'
+    tag-selector: 'div.container-vertical-default:nth-child(2)'
