@@ -1,6 +1,6 @@
 export class Org
-    name: "MSU"
-    uri: "http://www.womenslawproject.org/board-of-trustees/"
+    name: "ALDEU"
+    uri: "http://www.aldeparty.eu/en/contact"
     filename: null
-    dir: '/o/50334/images/21323/'
-    tag-selector: 'div.container-vertical-default:nth-child(2)'
+    dir: '/o/51621/images/21031/'
+    tag-selector: '#region-content'
