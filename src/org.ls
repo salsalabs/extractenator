@@ -17,6 +17,6 @@ export class Org
     # Constructor.  Build the output directory.
     ->
         @dir = switch @chapter-key
-        | null =>      "/o/#{@organization-key}/images/#{@template-key}"
-        | otherwise => "/o/#{@organization-key}/c/#{@chapter-key}/images/#{@template-key}"
+        | null => "/o/#{@organization-key}/images/#{@template-key}"
+        | _    => "/o/#{@organization-key}/c/#{@chapter-key}/images/#{@template-key}"
     
