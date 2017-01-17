@@ -1,9 +1,9 @@
 {
-    "name": "cyCleTO",
-    "uri": "https://www.cycleto.ca/",
+    "name": "just-a-name",
+    "uri": "read-this-to-create-template",
     "filename": null,
-    "organization-key": 51666,
+    "organization-key": a-number,
     "chapter-key": null,
-    "template-key":  21103,
-    "tag-selector": "#block-system-main"
+    "template-key":  a-number,
+    "tag-selector": "#css-selector-to-surround-templates"
 }
