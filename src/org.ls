@@ -3,15 +3,15 @@ require! path
 # Class to represent an organization for the Extractinator 900 (tm).
 # chapter_KEY and filename are optional and should be null when unused.
 export class Org
-    name: "UUDAN"
+    name: \CycleTO
     # Choose an input.  Filename is generally document.innerHTML.
-    uri: "http://www.uudeladvo.org/wp/sample-page/"
+    uri: 'https://www.cycleto.ca/'
     filename: null
-    organization-key: 51510
+    organization-key: 51666
     # Optional chapter-key.  Leave null otherwise.
-    chapter-key: 454
-    template-key: 21080
-    tag-selector: '#post-2'
+    chapter-key: null
+    template-key: 21103
+    tag-selector: '#block-system-main'
     dir: null
 
     # Constructor.  Build the output directory.
@@ -19,4 +19,3 @@ export class Org
         @dir = switch @chapter-key
         | null => "/o/#{@organization-key}/images/#{@template-key}"
         | _    => "/o/#{@organization-key}/c/#{@chapter-key}/images/#{@template-key}"
-    
