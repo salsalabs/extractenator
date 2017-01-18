@@ -3,15 +3,15 @@ require! path
 # Class to represent an organization for the Extractinator 900 (tm).
 # chapter_KEY and filename are optional and should be null when unused.
 export class Org
-    name: \CycleTO
+    name: \CleanAirCouncilPA
     # Choose an input.  Filename is generally document.innerHTML.
-    uri: 'https://www.cycleto.ca/'
+    uri: 'http://www.cleanairpa.org/'
     filename: null
-    organization-key: 51666
+    organization-key: 51176
     # Optional chapter-key.  Leave null otherwise.
     chapter-key: null
-    template-key: 21103
-    tag-selector: '#block-system-main'
+    template-key: 21112
+    tag-selector: '.left-column'
     dir: null
 
     # Constructor.  Build the output directory.
