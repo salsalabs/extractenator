@@ -8,7 +8,7 @@ require! {
     'prelude-ls': { compact, each, filter, flatten, head, map, reject, replace } 
     request
     url
-    './new-org': { Org }
+    './org': { Org }
 }
 org = new Org()
 
