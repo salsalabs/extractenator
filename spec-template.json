@@ -5,5 +5,5 @@
     "organization-key": a-number,
     "chapter-key": null,
     "template-key":  a-number,
-    "tag-selector": "#css-selector-to-surround-templates"
+    "tag-selector": "#css-selector-to-element-that-will-surround-templates"
 }
