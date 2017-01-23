@@ -1,14 +1,15 @@
-require! cheerio
-require! async
-require! './config'
-require! css
-fs = require 'fs-extra'
-require! path
-{compact, each, filter, flatten, head, map, reject, replace} = require 'prelude-ls'
-require! request
-require! url
-{Org} = require './org'
-
+require! {
+    cheerio
+    async
+    './config'
+    css
+    'fs-extra': fs
+    path
+    'prelude-ls': { compact, each, filter, flatten, head, map, reject, replace } 
+    request
+    url
+    './new-org': { Org }
+}
 org = new Org()
 
 class Task
