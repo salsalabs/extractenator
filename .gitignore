@@ -1,4 +1,4 @@
 .c9
 lib
 node_modules
-spec.json
+*spec.json
