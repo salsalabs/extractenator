@@ -5,7 +5,8 @@ export CDN_HOSTS =
     'code.jquery.com'
     'maxcdn.bootstrapcdn.com'
     'cdnjs.cloudflare.com'
-    'hello.myfonts.net' 
+    'hello.myfonts.net'
+    'use.typekit.net'
 
 export TEMPLATE_TAGS = """
 
