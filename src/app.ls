@@ -13,7 +13,6 @@ require! {
 org = new Org()
 
 class Task
-    @serial-number = 0
     (@referer, @elem, @tag, @attr) ->
         @resolved = null
         @content-type = null
@@ -21,20 +20,9 @@ class Task
         @filename = null
 
         @get-original!        
+        @get-resolved!
 
-        return unless @original?
-        return if @original instanceof Object
-        protocol = url.parse @original .protocol
-        @referer = switch @referer | null => org.uri | otherwise => @referer
-        try
-            @resolved = url.resolve @referer, @original unless protocol?
-        catch thrown
-            console.log "URL.resolve threw #{thrown}"
-            console.log "referer is #{@referer}"
-            console.log "original is #{@original}"
-            console.log "\n"
-            @resolved = null
-        @resolved = @original unless @resolved?
+    get-original: -> @original = null
  
     request: request.defaults do
         jar: true
@@ -59,6 +47,21 @@ class Task
         | otherwise ''
 
     get-html: -> @elem.html!
+
+    get-resolved: ->
+        return unless @original?
+        return if @original instanceof Object
+        protocol = url.parse @original .protocol
+        @referer = switch @referer | null => org.uri | otherwise => @referer
+        try
+            @resolved = url.resolve @referer, @original unless protocol?
+        catch thrown
+            console.log "URL.resolve threw #{thrown}"
+            console.log "referer is #{@referer}"
+            console.log "original is #{@original}"
+            console.log "\n"
+            esolved = null
+        @resolved = @original unless @resolved?
 
     read-resolved: (cb) ~>
         # console.log "read-resolved: #{@to-string!} null resolved #{not @resolved?}"
@@ -85,7 +88,7 @@ class Task
         console.log "save-buffer-to-dir mkdirs returned #err" if err?
         return cb null if err?
 
-        console.log "save-buffer-to-disk: #{local-filename}"
+        # console.log "save-buffer-to-disk: #{local-filename}"
         err <~ fs.writeFile local-filename, body, encoding: null
         return cb err if err?
         @store-filename!
@@ -105,13 +108,16 @@ class Task
     to-string: ->
         "#{@tag} #{@attr} #{@resolved} #{@filename}"
 
-class DeclTask extends Task
+# Class to process a single url parameter in a CSS style rule.
+# The URL is fetched and the file URL is replaced in the url argument. 
+class UrlTask extends Task
     get-original: ->
         pattern = //
             (.*url\(['"]*)
             (.+?)
             (['"]*\).*)
             //
+        console.log "@elem.value: #{@elem.value}"
         @matches = pattern.exec @elem.value
         return console.log "DeclTask.get-original: cannot match '#{@elem.value}', skipping." unless @matches?
         @original = @matches[2] if @matches.length > 2
@@ -120,6 +126,17 @@ class DeclTask extends Task
         return unless @matches? and @matches.length > 2
         @matches[2] = "#{@filename or @resolved}"
         @elem.value = @matches .slice 1 .join ''
+        
+class DeclTask extends Task
+    get-original: ->
+        # split for a list of urls.  process URL tasks.
+        parts = @elem.value .split ','
+        if parts.length > 0
+            tasks = parts.map (it) -> new UrlTask @referer, {value: it}, '', ''
+            err <~ async.each tasks, (t, cb) -> t.save-url-to-disk cb
+            new-value = tasks.map(it) -> it.elem.value .join ','
+            @elem.value = new-value
+        @original = null
 
 class FileTask extends Task
     get-original: -> @original = @elem.attr @attr; console.log "FileTask.get-original: attr #{@attr} value is #{@elem.attr @attr}"
@@ -190,6 +207,7 @@ class Extractenator9000
         return cb null unless body?
         t.save-buffer-to-disk body, cb
 
+    # Method to handle "url(" in a declaration.
     process-decl-list: (t, obj, cb) ->
         # console.log "process-css-file: #{t.to-string!}"
         decls = obj.stylesheet.rules
@@ -198,8 +216,10 @@ class Extractenator9000
             |> compact
             |> filter (declaration) -> /url/.test declaration.value
         tasks = decls.map (it) -> new DeclTask t.resolved, it, '', ''
-        err <~ async.each tasks, (t, cb) -> t.save-url-to-disk cb
-        return cb err
+        # moved to DeclTask so that multiple "url()" values can be handled.
+        # err <~ async.each tasks, (t, cb) -> t.save-url-to-disk cb
+        #return cb err
+        cb null
 
     process-import-list: (t, obj, cb) ->
         return cb null unless obj?
@@ -256,9 +276,9 @@ class Extractenator9000
 
         e.empty! .append config.TEMPLATE_TAGS
         task-list = @load-task-list $
-        console.log "run: task list contains #{task-list.length} tasks"
+        # console.log "run: task list contains #{task-list.length} tasks"
         err <- async.each task-list, @process-task-list
-        console.log "run: process-task-list returned err", err
+        console.log "run: process-task-list returned err", err if err?
         return cb err if err?
         t.save-buffer-to-disk $.html!, cb
 
