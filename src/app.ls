@@ -13,6 +13,9 @@ require! {
 org = new Org()
 
 class Task
+    @serial-number = 0
+    @url-cache = {}
+
     (@referer, @elem, @tag, @attr) ->
         @resolved = null
         @content-type = null
@@ -37,7 +40,7 @@ class Task
         basename = (path.basename @resolved .split '?')[0]
         return @clean-basename basename if path.extname basename .length > 0
         extension = (@content-type .split '/' .1)
-        return @clean-basename "#{basename || ++@@serial_number}.#{extension}"
+        return @clean-basename "#{basename || ++@@serial-number}.#{extension}"
 
     get-directory: ->
         | /image\//.test @content-type => \image
@@ -74,6 +77,7 @@ class Task
 
         @status-code = resp.statusCode
         @content-type = resp.headers.'content-type'
+        # console.log "Task:read-resolved: #{@status-code} on #{@resolved}"
         return cb null, body if @status-code == 200
         cb null, null
 
@@ -88,16 +92,24 @@ class Task
         console.log "save-buffer-to-dir mkdirs returned #err" if err?
         return cb null if err?
 
-        # console.log "save-buffer-to-disk: #{local-filename}"
         err <~ fs.writeFile local-filename, body, encoding: null
         return cb err if err?
         @store-filename!
         cb null
 
     save-url-to-disk: (cb) ~>
-        # console.log "save-url-to-disk: saving #(@content-type} #{@to-string!} to disk"
+        # console.log "save-url-to-disk: saving #{@content-type} #{@resolved} to disk"
+        return cb null unless @resolved?
+        if @@url-cache.hasOwnProperty @resolved
+            # console.log "save-url-to-disk: #{@resolved} found in cache"
+            return cb null
+        # console.log "save-url-to-disk: #{@resolved} not in cache"
+        @@url-cache[@resolved] = true
+
         err, body <~ @read-resolved
+        console.log "save-url-to-disk: caught error #{err} while reading #{@resolved}" if err?
         return cb err if err?
+        console.log "save-url-to-disk: caught error 'empty body' with status #{@status-code} on #{@resolved}" unless body?
         return cb null unless body?
         err <~ @save-buffer-to-disk body
         console.log "save-url-to-disk: caught error #{err} while saving #{@resolved}" if err?
@@ -117,29 +129,32 @@ class UrlTask extends Task
             (.+?)
             (['"]*\).*)
             //
-        console.log "@elem.value: #{@elem.value}"
         @matches = pattern.exec @elem.value
-        return console.log "DeclTask.get-original: cannot match '#{@elem.value}', skipping." unless @matches?
+        return @original = null unless @matches?
         @original = @matches[2] if @matches.length > 2
 
     store-filename: ->
         return unless @matches? and @matches.length > 2
         @matches[2] = "#{@filename or @resolved}"
         @elem.value = @matches .slice 1 .join ''
-        
+        console.log "UrlTask.store-filename, @elem.value is #{@elem.value}"
+
 class DeclTask extends Task
     get-original: ->
         # split for a list of urls.  process URL tasks.
         parts = @elem.value .split ','
         if parts.length > 0
-            tasks = parts.map (it) -> new UrlTask @referer, {value: it}, '', ''
+            tasks = parts.map (it) ~> new UrlTask @referer, {value: it}, '', ''
             err <~ async.each tasks, (t, cb) -> t.save-url-to-disk cb
-            new-value = tasks.map(it) -> it.elem.value .join ','
+            new-value = (tasks |> map (.elem.value)) .join ','
+            console.log "DeclTask.get-original new-value is #{new-value}"
+            console.log "DeclTask.get-original @elem-value before set is #{@elem.value}"
             @elem.value = new-value
+        console.log "DeclTask.get-original final @elem.value is #{@elem.value}"
         @original = null
 
 class FileTask extends Task
-    get-original: -> @original = @elem.attr @attr; console.log "FileTask.get-original: attr #{@attr} value is #{@elem.attr @attr}"
+    get-original: -> @original = @elem.attr @attr
     store-filename: -> @elem.attr @attr, "#{@filename or @resolved}"
 
 class HtmlTask extends Task
@@ -192,6 +207,7 @@ class Extractenator9000
         err <~ @process-import-list t, obj
         return cb err if err?
         try
+            # console.log "process-css-buffer: stringifying the CSS, #{t.resolved}"
             return cb null, css.stringify obj
         catch thrown
             console.log "process-css-buffer: caught css.stringify error #{thrown}"
@@ -250,12 +266,12 @@ class Extractenator9000
     read-html: (t, cb) ->      
         if org.filename?
             err, body <~ fs.readFile org.filename, encoding: \utf8
-            console.log "run: retrieved #{body.length} bytes from #{org.filename}"
+            # console.log "run: retrieved #{body.length} bytes from #{org.filename}"
             cb err, body
         else
             err, body <~ t.read-resolved
             return cb err, body unless body?
-            console.log "run: retrieved #{body.length} bytes from #{org.uri}"
+            # console.log "run: retrieved #{body.length} bytes from #{org.uri}"
             cb err, body
 
     run: (cb) ->
