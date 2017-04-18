@@ -52,6 +52,7 @@ class Task
     get-html: -> @elem.html!
 
     get-resolved: ->
+        @resolved = @original
         return unless @original?
         return if @original instanceof Object
         protocol = url.parse @original .protocol
@@ -137,7 +138,6 @@ class UrlTask extends Task
         return unless @matches? and @matches.length > 2
         @matches[2] = "#{@filename or @resolved}"
         @elem.value = @matches .slice 1 .join ''
-        console.log "UrlTask.store-filename, @elem.value is #{@elem.value}"
 
 class DeclTask extends Task
     get-original: ->
@@ -147,10 +147,7 @@ class DeclTask extends Task
             tasks = parts.map (it) ~> new UrlTask @referer, {value: it}, '', ''
             err <~ async.each tasks, (t, cb) -> t.save-url-to-disk cb
             new-value = (tasks |> map (.elem.value)) .join ','
-            console.log "DeclTask.get-original new-value is #{new-value}"
-            console.log "DeclTask.get-original @elem-value before set is #{@elem.value}"
             @elem.value = new-value
-        console.log "DeclTask.get-original final @elem.value is #{@elem.value}"
         @original = null
 
 class FileTask extends Task
