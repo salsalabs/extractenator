@@ -187,19 +187,16 @@ class Extractenator9000
         obj = css.parse body.toString!, silent: true, source: t.referer
         return cb null unless obj.stylesheet?
         return cb null unless obj.stylesheet.rules?
-        err <~ @process-decl-list t, obj
-        return cb err if err?
-        err <~ @process-import-list t, obj
-        return cb err if err?
+        #err <~ @process-decl-list t, obj
+        #return cb err if err?
+        #err <~ @process-import-list t, obj
+        #return cb err if err?
         try
-            console.log JSON.stringify obj
-            process.exit 0
-
             console.log "process-css-buffer: stringifying the CSS, #{t.resolved}"
             return cb null, css.stringify obj
         catch thrown
             console.log "process-css-buffer: caught css.stringify error #{thrown}"
-        cb null, null
+        cb null, body
 
     process-css-file-task: (t, cb) ~>
         # console.log "process-css-file: #{t.to-string!}"
@@ -207,7 +204,7 @@ class Extractenator9000
         return cb err if err?
         return cb null unless body?
         (err, body) <~ @process-css-buffer t, body
-        return cb err if err?
+        #return cb err if err?
         return cb null unless body?
         t.save-buffer-to-disk body, cb
 
