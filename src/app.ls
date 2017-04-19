@@ -121,9 +121,7 @@ class Task
     to-string: ->
         "#{@tag} #{@attr} #{@resolved} #{@filename}"
 
-# Class to process a single url parameter in a CSS style rule.
-# The URL is fetched and the file URL is replaced in the url argument. 
-class UrlTask extends Task
+class DeclTask extends Task
     get-original: ->
         pattern = //
             (.*url\(['"]*)
@@ -138,17 +136,7 @@ class UrlTask extends Task
         return unless @matches? and @matches.length > 2
         @matches[2] = "#{@filename or @resolved}"
         @elem.value = @matches .slice 1 .join ''
-
-class DeclTask extends Task
-    get-original: ->
-        # split for a list of urls.  process URL tasks.
-        parts = @elem.value .split ','
-        if parts.length > 0
-            tasks = parts.map (it) ~> new UrlTask @referer, {value: it}, '', ''
-            err <~ async.each tasks, (t, cb) -> t.save-url-to-disk cb
-            new-value = (tasks |> map (.elem.value)) .join ','
-            @elem.value = new-value
-        @original = null
+        console.log @elem.property, @elem.value
 
 class FileTask extends Task
     get-original: -> @original = @elem.attr @attr
@@ -204,7 +192,10 @@ class Extractenator9000
         err <~ @process-import-list t, obj
         return cb err if err?
         try
-            # console.log "process-css-buffer: stringifying the CSS, #{t.resolved}"
+            console.log JSON.stringify obj
+            process.exit 0
+
+            console.log "process-css-buffer: stringifying the CSS, #{t.resolved}"
             return cb null, css.stringify obj
         catch thrown
             console.log "process-css-buffer: caught css.stringify error #{thrown}"
@@ -229,10 +220,8 @@ class Extractenator9000
             |> compact
             |> filter (declaration) -> /url/.test declaration.value
         tasks = decls.map (it) -> new DeclTask t.resolved, it, '', ''
-        # moved to DeclTask so that multiple "url()" values can be handled.
-        # err <~ async.each tasks, (t, cb) -> t.save-url-to-disk cb
-        #return cb err
-        cb null
+        err <~ async.each tasks, (t, cb) -> t.save-url-to-disk cb
+        return cb err
 
     process-import-list: (t, obj, cb) ->
         return cb null unless obj?
