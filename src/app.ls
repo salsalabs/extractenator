@@ -187,19 +187,20 @@ class Extractenator9000
         obj = css.parse body.toString!, silent: true, source: t.referer
         return cb null unless obj.stylesheet?
         return cb null unless obj.stylesheet.rules?
-        #err <~ @process-decl-list t, obj
-        #return cb err if err?
-        #err <~ @process-import-list t, obj
-        #return cb err if err?
+        err <~ @process-decl-list t, obj
+        return cb err if err?
+        # Broken.  Take it out of the mix.  Really remove later...
+        # err <~ @process-import-list t, obj
+        # return cb err if err?
         try
             console.log "process-css-buffer: stringifying the CSS, #{t.resolved}"
             return cb null, css.stringify obj
         catch thrown
             console.log "process-css-buffer: caught css.stringify error #{thrown}"
-        cb null, body
+            return cb null, body
 
     process-css-file-task: (t, cb) ~>
-        # console.log "process-css-file: #{t.to-string!}"
+        # console.log "process-css-file-task: #{t.to-string!}"
         (err, body) <~ t.read-resolved
         return cb err if err?
         return cb null unless body?
@@ -210,7 +211,7 @@ class Extractenator9000
 
     # Method to handle "url(" in a declaration.
     process-decl-list: (t, obj, cb) ->
-        # console.log "process-css-file: #{t.to-string!}"
+        # console.log "process-decl-list: #{t.to-string!}"
         decls = obj.stylesheet.rules
             |> map (.declarations)
             |> flatten
@@ -220,16 +221,26 @@ class Extractenator9000
         err <~ async.each tasks, (t, cb) -> t.save-url-to-disk cb
         return cb err
 
-    process-import-list: (t, obj, cb) ->
-        return cb null unless obj?
-        rules = obj.stylesheet.rules
-            |> filter (.import)
-            |> compact
-            |> filter (rule) -> rule.import.indexOf('url(') != -1
-        tasks = rules.map (it) -> new ImportTask t.resolved, it, '', ''
-        err <~ async.each tasks, (t, cb) -> t.save-url-to-disk cb
-        return cb err
 
+    # This is broken.  No .import in parsed CSS.
+    # process-import-list: (t, obj, cb) ->
+    #    # return cb null unless obj?
+    #    rules = obj.stylesheet.rules
+    #        |> map (.import)
+    #        |> compact
+    #        #|> filter (rule) -> rule.import.indexOf('url(') != -1
+    #    console.log rules.length, "Rules"
+    #    tasks = rules.map (it) -> new ImportTask t.resolved, it, '', ''
+    #    err <~ async.each tasks, (t, cb) -> t.save-url-to-disk cb
+    #    return cb err
+
+    # This is where @import needs to be processed.  A <style> tag can contain more
+    # than one import.  Those will need to be processed asynchronously.  Like style
+    # tags that reference .css files.  The major difference is that there's not an 
+    # element for the @import "thing".  That will probably have to be faked...
+    # @note jQuery('style:contains("@import")').each(function() {console.log(jQuery(this).html()); })
+    # @warn Mixing @import and regular CSS will obey the @import and ingore the
+    # regular CSS.  Item for future study.
     process-style-task: (t, cb) ->
         # console.log "process-style-task: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS, \n#{t.elem.html!}\n"
         (err, body) <- @process-css-buffer t, t.get-html!
