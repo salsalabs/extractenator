@@ -1,5 +1,8 @@
 require! {
     css
+    'prelude-ls' : { map, each, filter }
+    request
+    cheerio
 }
 
 data = """
@@ -11,5 +14,13 @@ data = """
 @import url("http://www.cesr.org/sites/all/modules/views/css/views.css?oo0bhk");
 @import url("http://www.cesr.org/sites/all/modules/media/modules/media_wysiwyg/css/media_wysiwyg.base.css?oo0bhk");
 """
-obj = css.parse data.toString!, silent: true, source: 'http://www.cesr.org'
-console.log obj
+
+u = 'http://www.cesr.org'
+obj = css.parse data.toString!, silent: true, source: u
+obj.stylesheet.rules |> each (it) -> console.log it
+obj.stylesheet.rules |> map (.import) |> filter (it) -> /url/.test it.import |> each (it) -> console.log it
+
+(err, resp, body) <~ request u
+through err if err?
+$ = cheerio.load body.to-string!, 'utf-8'
+$ 'style[src!=""]' .each -> console.log $(this).html()
