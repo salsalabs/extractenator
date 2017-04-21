@@ -139,7 +139,7 @@ class DeclTask extends Task
         console.log @elem.property, @elem.value
 
 class FileTask extends Task
-    get-original: -> @original = @elem.attr @attr
+    get-original: -> @original = @elem.attr @attr; console.log "FileTask: #{@tag} #{@attr} #{@original}"; @original
     store-filename: -> @elem.attr @attr, "#{@filename or @resolved}"
 
 class HtmlTask extends Task
@@ -177,9 +177,15 @@ class Extractenator9000
         $ 'script[src*=js]'      .each -> task-list.push new FileTask org.uri, $(this), 'script', 'src'
         $ 'img:not([src^=data])' .each -> task-list.push new FileTask org.uri, $(this), 'img', 'src'
         # https://developer.mozilla.org/en-US/docs/Web/HTML/Link_types
+<<<<<<< HEAD
         $ 'link[rel=icon]'       .each -> task-list.push new FileTask org.uri, $(this), 'img', 'href'
         $ 'link[rel=stylesheet]' .each -> task-list.push new FileTask org.uri, $(this), 'css', 'href'
         $ 'style[src!=""]'       .each -> task-list.push new FileTask org.uri, $(this), 'style', ''
+=======
+        $ 'link[rel=*icon]'      .each -> task-list.push new FileTask org.uri, $(this), 'img', 'href'
+        $ 'link[rel=stylesheet]' .each -> task-list.push new FileTask org.uri, $(this), 'css', 'href'
+        $ 'style[src!=""]'       .each -> task-list.push new FileTask org.uri, $(this), 'style-x', ''
+>>>>>>> 2.7.2
         reject @not-useful, task-list
         
     process-css-buffer: (t, body, cb) ->
@@ -212,6 +218,7 @@ class Extractenator9000
     # Method to handle "url(" in a declaration.
     process-decl-list: (t, obj, cb) ->
         # console.log "process-decl-list: #{t.to-string!}"
+        obj.stylesheet.rules.forEach (e) -> console.log e
         decls = obj.stylesheet.rules
             |> map (.declarations)
             |> flatten
@@ -219,7 +226,17 @@ class Extractenator9000
             |> filter (declaration) -> /url/.test declaration.value
         tasks = decls.map (it) -> new DeclTask t.resolved, it, '', ''
         err <~ async.each tasks, (t, cb) -> t.save-url-to-disk cb
-        return cb err
+        return cb err if err?
+ 
+        decls = obj.stylesheet.rules
+            |> map (.import)
+            |> flatten
+            |> compact
+            |> filter (declaration) -> /url/.test declaration.value
+        console.log "decls", decls
+        tasks = decls.map (it) -> new DeclTask t.resolved, it, '', ''
+        err <~ async.each tasks, (t, cb) -> t.save-url-to-disk cb
+        return cb err       
 
     process-style-task: (t, cb) ->
         # console.log "process-style-task: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS, \n#{t.elem.html!}\n"
