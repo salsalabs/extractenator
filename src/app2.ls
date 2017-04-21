@@ -74,17 +74,19 @@ class FileHandler
         return cb null if err?
     
         console.error "Handler: empty buffer while fetching #{@resolved}" unless buffer?
-        return cb null not buffer?
+        return cb null unless buffer?
     
-        (err, body) <- @transform body
+        (err, buffer) <- @transform body
         console.error "Handler: #{err} while transforming #{@resolved}" if err?
         return cb null not buffer?
     
-        (err, filename) <- @save buffer
+        (err) <- @save buffer
         console.error "Handler: #{err} while saving #{@resolved}" if err?
-    
-        rule[@attr] = @filename
+        return cb null if err?
+        
+        @elem[@attr] = @filename
         console.log "Handler: saved @filename"
+        cb null
 
     request: request.defaults do
         jar: true
@@ -93,7 +95,6 @@ class FileHandler
             'Referer':@org.uri
             'User-Agent': config.USER_AGENT    
 
-    # returns (err)
     save: (buffer, cb) ->
         # console.error "save-buffer-to-disk: #{@to-string!}"
         @filename = path.join org.dir, @get-directory!, @get-basename!
@@ -114,20 +115,38 @@ class CSSHandler extends Handlers
     transform: (body, cb) ->
         try
             css-obj = css.parse body.toString!, silent: true, source: @referer
-            return cb null, body unless css.obj.stylesheet?
-            return cb null, body unless css.obj.stylesheet.rules?
-            rules = css.obj.stylesheet.rules.map (@attr)
-            err <~ async.each rules, @transform-rule
-            return cb null, css.stringify obj
+            return cb null, body unless css-obj.stylesheet?
+            return cb null, body unless css-obj.stylesheet.rules?
+            decls = css-obj.stylesheet.rules
+                |> map (.declarations)
+                |> flatten
+                |> compact
+
+            value-decls = decls |> filter validate-value
+            if value-decls.length > 0
+                err <~ async.each decls, @transform-decl
+                return cb null, css.stringify obj
+
+            import-decls = decls |> filter validate-import
+            if decls.length > 0
+                err <~ async.each decls, @transform-import
+                return cb null, css.stringify obj
+ 
         catch thrown
             console.error "transform-css-buffer: caught css.stringify error #{thrown}"
             return cb null, body
 
-    transform-rule: (rule, cb) ->
+    transform-common: (rule, attr, cb) ->
         return cb null unless @attr in rule
-        handler = new Handler (@uri or @referer), rule, @attr
+        handler = new Handler (@uri or @referer), rule, attr
         (err) <- handler.run!
         console.error "CSSHandler: #{err} while saving #{@handler.resolved}" if err?
         return cb err if err?
         console.log "CSSHander: saved @filename"
         return cb null
+
+
+    transform-decl: (rule, cb) -> transform-common rule, \value, cb
+    transform-import: (rule, cb) -> transform-common rule, \import, cb
+    validate-import: (e) -> e.property == \src
+    validate-value: (e) -> /url/.test e.option
