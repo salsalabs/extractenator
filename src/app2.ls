@@ -11,7 +11,7 @@ require! {
     './org': { Org }
 }
 
-class Base
+class FileHandler
     @serial-number = 0
     @uri-cache = {}
 
@@ -23,6 +23,17 @@ class Base
         @uri = @elem[@attr]
 
     clean-basename: (v) -> v .split /[\?\&\;\#]/ .0
+
+    # returns (err, body)
+    fetch: (cb) ->
+        cb null, null if @protocol == 'data'
+        (err, resp, body) <~ @request @resolved!
+        if err?
+            console.err "fetch caught #{err} on {#resolved!}"
+            return cb null, null
+        @content-type = resp.headers.'content-type'
+        return cb null, body if resp.status-code == 200
+        cb null, null
 
     get-basename: ->
         basename = (path.basename @resolved .split '?')[0]
@@ -57,7 +68,23 @@ class Base
         @uri-cache[@uri] = @resolved
         @resolved
 
-    process: (body, cb) -> cb null, body
+    run: (cb) ->
+        (err, buffer) <- @fetch!
+        console.error "Handler: #{err} while fetching #{@resolved}" if err?
+        return cb null if err?
+    
+        console.error "Handler: empty buffer while fetching #{@resolved}" unless buffer?
+        return cb null not buffer?
+    
+        (err, body) <- @transform body
+        console.error "Handler: #{err} while transforming #{@resolved}" if err?
+        return cb null not buffer?
+    
+        (err, filename) <- @save buffer
+        console.error "Handler: #{err} while saving #{@resolved}" if err?
+    
+        rule[@attr] = @filename
+        console.log "Handler: saved @filename"
 
     request: request.defaults do
         jar: true
@@ -66,19 +93,8 @@ class Base
             'Referer':@org.uri
             'User-Agent': config.USER_AGENT    
 
-    # returns (err, body)
-    fetch (cb) ->
-        cb null, null if @protocol == 'data'
-        (err, resp, body) <~ @request @resolved!
-        if err?
-            console.err "fetch caught #{err} on {#resolved!}"
-            return cb null, null
-        @content-type = resp.headers.'content-type'
-        return cb null, body if resp.status-code == 200
-        cb null, null
-
     # returns (err)
-    save (buffer, cb) ->
+    save: (buffer, cb) ->
         # console.error "save-buffer-to-disk: #{@to-string!}"
         @filename = path.join org.dir, @get-directory!, @get-basename!
         local-filename = switch @filename.slice 0 1
@@ -92,30 +108,26 @@ class Base
         err <~ fs.writeFile local-filename, body, encoding: null
         return cb err
 
-class CSSHandler extends Base
-    process(body, cb) ->
+    transform: (body, cb) -> cb null, body
+
+class CSSHandler extends Handlers
+    transform: (body, cb) ->
         try
-            obj = css.parse body.toString!, silent: true, source: @referer
-            return cb null, body unless obj.stylesheet?
-            return cb null, body unless obj.stylesheet.rules?
-            rules = obj.stylesheet.rules.map (@attr)
-            err <~ async.each rules, process-rule
+            css-obj = css.parse body.toString!, silent: true, source: @referer
+            return cb null, body unless css.obj.stylesheet?
+            return cb null, body unless css.obj.stylesheet.rules?
+            rules = css.obj.stylesheet.rules.map (@attr)
+            err <~ async.each rules, @transform-rule
             return cb null, css.stringify obj
         catch thrown
-            console.error "process-css-buffer: caught css.stringify error #{thrown}"
+            console.error "transform-css-buffer: caught css.stringify error #{thrown}"
             return cb null, body
 
-    process-rule(rule, cb) ->
+    transform-rule: (rule, cb) ->
         return cb null unless @attr in rule
-        obj = new Base (@uri or @referer), rule, @attr
-        (err, buffer) <- obj.fetch!
-        console.error "CSSHandler: #{err} while processing #{rule[@attr]}" if err?
-        return cb null if err?
-        console.error "CSSHandler: empty buffer while processing #{rule[@attr]}" unless buffer?
-        return cb null not buffer?
-        (err, filename) <-@save buffer
-        console.error "CSSHandler: #{err} while saving #{rule[@attr]}" if err?
-        rule[@attr] = @filename
+        handler = new Handler (@uri or @referer), rule, @attr
+        (err) <- handler.run!
+        console.error "CSSHandler: #{err} while saving #{@handler.resolved}" if err?
+        return cb err if err?
         console.log "CSSHander: saved @filename"
-
-        
+        return cb null
