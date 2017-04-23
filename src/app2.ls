@@ -20,7 +20,7 @@ class FileHandler
         @org = new Org()
         @protocol = null
         @resolved = null
-        @uri = @elem[@attr]
+        @uri = @get-uri!
 
     clean-basename: (v) -> v .split /[\?\&\;\#]/ .0
 
@@ -68,6 +68,8 @@ class FileHandler
         @uri-cache[@uri] = @resolved
         @resolved
 
+    get-url: -> @elem .attr @attr
+
     run: (cb) ->
         (err, buffer) <- @fetch!
         console.error "Handler: #{err} while fetching #{@resolved}" if err?
@@ -78,13 +80,12 @@ class FileHandler
     
         (err, buffer) <- @transform body
         console.error "Handler: #{err} while transforming #{@resolved}" if err?
-        return cb null not buffer?
+        return cb null if not buffer?
     
         (err) <- @save buffer
         console.error "Handler: #{err} while saving #{@resolved}" if err?
         return cb null if err?
-        
-        @elem[@attr] = @filename
+        @store-filename!
         console.log "Handler: saved @filename"
         cb null
 
@@ -97,7 +98,7 @@ class FileHandler
 
     save: (buffer, cb) ->
         # console.error "save-buffer-to-disk: #{@to-string!}"
-        @filename = path.join org.dir, @get-directory!, @get-basename!
+        @filename = path.join @org.dir, @get-directory!, @get-basename!
         local-filename = switch @filename.slice 0 1
             | '/' => @filename.slice 1
             | otherwise => @filename
@@ -109,9 +110,14 @@ class FileHandler
         err <~ fs.writeFile local-filename, body, encoding: null
         return cb err
 
+    store-filename: -> @elem .attr @attr = @filename
+
     transform: (body, cb) -> cb null, body
 
-class CSSHandler extends Handlers
+# Override base class to parse as CSS and store a file.
+class CSSHandler extends FileHandler
+
+    # Override to parse `body` for @font-face and @import tags
     transform: (body, cb) ->
         try
             css-obj = css.parse body.toString!, silent: true, source: @referer
@@ -136,17 +142,86 @@ class CSSHandler extends Handlers
             console.error "transform-css-buffer: caught css.stringify error #{thrown}"
             return cb null, body
 
+    # Common CSS element handler.
+    # @param  [Object]    rule  the CSS rule of interest
+    # @param  [String]    attr  attribute to examine for a URL
+    # @param  [Function]  cb    Callback to accept (err)
     transform-common: (rule, attr, cb) ->
         return cb null unless @attr in rule
         handler = new Handler (@uri or @referer), rule, attr
         (err) <- handler.run!
         console.error "CSSHandler: #{err} while saving #{@handler.resolved}" if err?
         return cb err if err?
-        console.log "CSSHander: saved @filename"
+        console.log "CSSHander: saved #{handler.filename}"
         return cb null
 
-
+    # Transform a 'declaration' used by @font-face
+    # @param  [Object]    rule  the CSS rule of interest
+    # @param  [Function]  cb    Callback to accept (err)
     transform-decl: (rule, cb) -> transform-common rule, \value, cb
+
+    # Transform an @option rule
+    # @param  [Object]    rule  the CSS rule of interest
+    # @param  [Function]  cb    Callback to accept (err)
     transform-import: (rule, cb) -> transform-common rule, \import, cb
-    validate-import: (e) -> e.property == \src
-    validate-value: (e) -> /url/.test e.option
+    
+    # Return true if the @import contains a URL
+    # @param  [Object]    rule  the CSS rule of interest
+    validate-import: (rule) -> rule.property == \src
+    
+    # Return true if the @font-face contains a URL (typically it does...)
+    # @param  [Object]    rule  the CSS rule of interest
+    validate-value: (rule) -> /url/.test rule.option
+
+# Override base class to store CSS back in the element (not in a file)
+class StyleHandler  extends CSSHandler
+    fetch: (cb) -> cb null, @elem .html!
+    save: (buffer, cb) -> @elem .html buffer ; cb null
+    store-filename: ->
+
+# Override base class to parse HTML
+class HTMLHandler extends FileHandler
+
+    # Override to process an HTML file.  Selected elements are either saved
+    # to disk or CSS-parsed and then saved to disk.
+    transform: (body, cb) ->
+        $ = cheerio.load body.to-string!, 'utf-8'
+        e = $ org.tag-selector
+        switch e.length
+        | 0 => return cb "tag selector '#{@org.tag-selector}' does not indentify a node"
+        | 1 =>
+        | otherwise => return cb console.log "tag selector '#{@org.tag-selector}' identifies #{e.length} nodes, must only identify one."
+        e.empty! .append config.TEMPLATE_TAGS
+
+        task-list = []
+        $ 'a'                    .each -> task-list.push new FileHandler  @org.uri, $(this), 'href'
+        $ 'img:not([src^=data])' .each -> task-list.push new FileHandler  @org.uri, $(this), 'src'
+        $ 'link[rel*=icon]'      .each -> task-list.push new FileHandler  @org.uri, $(this), 'href'
+        $ 'link[rel=stylesheet]' .each -> task-list.push new CSSHandker   @org.uri, $(this), 'href'
+        $ 'script[src*=js]'      .each -> task-list.push new FileHandler  @org.uri, $(this), 'src'
+        $ 'style'                .each -> task-list.push new StyleHandler @org.uri, $(this), null
+ 
+        err <- async.each task-list, @process-task-list
+        console.log "run: process-task-list returned err", err if err?
+        return cb err, body if err?
+        cb null, $.html!
+
+# Override to use data from the Org
+class Extractenator9000 extends HTMLHandler
+    () ->
+        @org = new Org()
+        super @org.uri, null, null
+
+    # Override to store in the directory and not in a subdirectory.
+    get-directory: -> ''
+
+    # Override to use the URI in the Org record.
+    get-uri: -> @org.uri
+    
+    # Override to not store the filename in a structure.
+    store-filename: ->
+
+# Application starts here.
+(err) <- new Extractenator9000().run
+    console.log err, "on", @org.uri if err?
+    process.exit 0
