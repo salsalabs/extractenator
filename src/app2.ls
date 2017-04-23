@@ -5,7 +5,7 @@ require! {
     css
     'fs-extra': fs
     path
-    'prelude-ls': { compact, each, filter, flatten, head, map, reject, replace } 
+    'prelude-ls': { compact, each, filter, flatten, map } 
     request
     url
     './org': { Org }
@@ -211,9 +211,7 @@ class Extractenator9000 extends HTMLHandler
     () ->
         @org = new Org()
         super @org.uri, null, null
-
-    # Override to store in the directory and not in a subdirectory.
-    get-directory: -> ''
+        @content-type = ''
 
     # Override to use the URI in the Org record.
     get-uri: -> @org.uri
