@@ -5,43 +5,39 @@ require! {
     css
     'fs-extra': fs
     path
-    'prelude-ls': { compact, each, filter, flatten, head, map, reject, replace } 
+    'prelude-ls': { compact, each, filter, flatten, map } 
     request
     url
     './org': { Org }
 }
-org = new Org()
 
-class Task
+# Base class that resolves an element's contents using the org's URi
+# then updates the element.
+class AnchorHandler
+    # Class variable to contain a serial number for file disambiguation.
     @serial-number = 0
-    @url-cache = {}
+    # Class variable to cache URIs so that they are only processed once
+    @uri-cache = {}
 
-    (@referer, @elem, @tag, @attr) ->
-        @resolved = null
+    (@referer, @elem, @attr) ->
         @content-type = null
-        @status-code = null
-        @filename = null
+        @org = null
+        @resolved = null
+        @url-object = null
+        @uri = @get-uri!
 
-        @get-original!        
-        @get-resolved!
-
-    get-original: -> @original = null
- 
-    request: request.defaults do
-        jar: true
-        encoding: null
-        headers:
-            'Referer': org.uri
-            'User-Agent': config.USER_AGENT
-
+    # @return returns the filename part of the basename.  No extra junk.
     clean-basename: (v) -> v .split /[\?\&\;\#]/ .0
 
+    # @return returns the basename for the URI.
     get-basename: ->
         basename = (path.basename @resolved .split '?')[0]
         return @clean-basename basename if path.extname basename .length > 0
         extension = (@content-type .split '/' .1)
         return @clean-basename "#{basename || ++@@serial-number}.#{extension}"
 
+    # @return determine the directory where the file should live.  Directories
+    # are chosen based on the Content_Type from the HTTP headers.
     get-directory: ->
         | /image\//.test @content-type => \image
         | /css/.test @content-type => \css
@@ -49,234 +45,245 @@ class Task
         | /font/.test @content-type => \font
         | otherwise ''
 
-    get-html: -> @elem.html!
+    # Return the Org object for this run.  The Org object builds itself
+    # from file `spec.json`.  
+    get-org: ->
+        @org = new Org() unless @org?
+        @org
 
+    # @return  [Object]  Organization object
+    # Retrieve the URI's protocol.  Used in deciding how to read the URI
+    # and where to store the URI contents.
+    get-protocol: ->
+        @url-object = url.parse @get-uri! unless @url-object?
+        @url-obj.protocol
+
+    # @return  Resolve the current URI against the site URL or the current
+    # referer.  This should make for clean URIs in `fetch`
     get-resolved: ->
-        @resolved = @original
-        return unless @original?
-        return if @original instanceof Object
-        protocol = url.parse @original .protocol
-        @referer = switch @referer | null => org.uri | otherwise => @referer
-        try
-            @resolved = url.resolve @referer, @original unless protocol?
+        return @@uri-cache[@uri] if @uri in @@uri-cache
+        url-obj = url.parse @uri
+        return @uri if url-obj.host in config.CDN_HOSTS
+        return @uri if @get-protocol! == 'data'
+        referer = switch @referer | null => @get-org! .uri | otherwise => @referer
+        try unless @get-protocol!?
+            @resolved = url.resolve @referer, @uri
         catch thrown
-            console.log "URL.resolve threw #{thrown}"
-            console.log "referer is #{@referer}"
-            console.log "original is #{@original}"
-            console.log "\n"
-            esolved = null
-        @resolved = @original unless @resolved?
+            console.error "URL.resolve threw #{thrown}"
+            console.error "referer is #{@referer}"
+            console.error "original is #{@uri}"
+            console.error "\n"
+            @resoived = @url
 
-    read-resolved: (cb) ~>
-        # console.log "read-resolved: #{@to-string!} null resolved #{not @resolved?}"
-        return cb null, null unless @resolved?
-        return cb null, null if @resolved.indexOf('data:') != -1
-        (err, resp, body) <~ @request @resolved
+        @uri-cache[@uri] = @resolved
+        @resolved
+
+    # @return returns the current URI.  Override this if your class does
+    # not need a URI in an element.
+    get-uri: -> @elem .attr @attr
+
+    # Worker bee.  Gets the resolved filename and stores it.  Override this
+    # to add any I/O in your subclass.
+    # @param  [Function]  cb  callback to handle (err)
+    run: (cb) ->
+        @get-resolved!
+        @store-filename!
+
+    # Store the filename in the element instance variable.  Override this
+    # method if there's not an element.
+    store-filename: -> @elem .attr @attr = @filename
+
+# Override base class to retrieve a file's contents and save it
+class FileHandler extends AnchorHandler
+    # Retrieve the contents of the instance URI.  A null is returned if
+    # the URI fails or the returned contents are empty.  If the HTTP status
+    # code is not 200 (success), then the buffer from the website is
+    # returned.
+    # @param  [Function]  cb  callback to handle (cb, buffer)
+    fetch: (cb) ->
+        cb null, null if @get-protocol! == 'data'
+        (err, resp, body) <~ @request @resolved!
         if err?
-            console.log "read-resolved caught #{err} on #{@resolved}"
+            console.err "fetch caught #{err} on {#@resolved!}"
             return cb null, null
-
-        @status-code = resp.statusCode
         @content-type = resp.headers.'content-type'
-        # console.log "Task:read-resolved: #{@status-code} on #{@resolved}"
-        return cb null, body if @status-code == 200
+        return cb null, body if resp.status-code == 200
         cb null, null
 
-    save-buffer-to-disk: (body, cb) ~>
-        # console.log "save-buffer-to-disk: #{@to-string!}"
-        @filename = path.join org.dir, @get-directory!, @get-basename!
+    # Fetch a file, store it in the directory, then store the new filename in the
+    # element instance variable.
+    # @param  [Function]  cb  callback to handle (null).
+    run: (cb) ->
+        (err, buffer) <- @fetch!
+        console.error "Handler: #{err} while fetching #{@resolved}" if err?
+        return cb null if err?
+    
+        console.error "Handler: empty buffer while fetching #{@resolved}" unless buffer?
+        return cb null unless buffer?
+    
+        (err, buffer) <- @transform buffer
+        console.error "Handler: #{err} while transforming #{@resolved}" if err?
+        return cb null if not buffer?
+    
+        (err) <- @save buffer
+        console.error "Handler: #{err} while saving #{@resolved}" if err?
+        return cb null if err?
+
+        @store-filename!
+        console.log "Handler: saved @filename"
+        cb null
+
+    # Instalce variable to return the `request` instance used in this class.
+    # The `request` instance contains Referer, User-Agent and cookies.
+    request: request.defaults do
+        jar: true
+        encoding: null
+        headers:
+            'Referer':@get-org! .uri
+            'User-Agent': config.USER_AGENT    
+
+    # Store the provided `buffer` using the content-type and the file's
+    # basename.
+    # @param  [Buffer|String] buffer contents to save
+    # @param  [Function]      cb     callback to handle (err)
+    save: (buffer, cb) ->
+        # console.error "save-buffer-to-disk: #{@to-string!}"
+        @filename = path.join @get-org!.dir, @get-directory!, @get-basename!
         local-filename = switch @filename.slice 0 1
             | '/' => @filename.slice 1
             | otherwise => @filename
         target-dir = path.dirname local-filename
         err <~ fs.mkdirs target-dir
-        console.log "save-buffer-to-dir mkdirs returned #err" if err?
+        console.error "save-buffer-to-dir mkdirs returned #err" if err?
         return cb null if err?
 
-        err <~ fs.writeFile local-filename, body, encoding: null
-        return cb err if err?
-        @store-filename!
-        cb null
+        err <~ fs.writeFile local-filename, buffer, encoding: null
+        return cb err
 
-    save-url-to-disk: (cb) ~>
-        # console.log "save-url-to-disk: saving #{@content-type} #{@resolved} to disk"
-        return cb null unless @resolved?
-        if @@url-cache.hasOwnProperty @resolved
-            # console.log "save-url-to-disk: #{@resolved} found in cache"
-            return cb null
-        # console.log "save-url-to-disk: #{@resolved} not in cache"
-        @@url-cache[@resolved] = true
+    # Method to transform and return the contents of the provilded `buffer`.
+    # The defuault behavior is to return `buf` without modification.
+    # @param  [Buffer|String]  buffer  buffer to writeto write
+    # @param  [Function]       cb      callback to handle (err, modifiedBuffer)
+    transform: (body, cb) -> cb null, body
 
-        err, body <~ @read-resolved
-        console.log "save-url-to-disk: caught error #{err} while reading #{@resolved}" if err?
-        return cb err if err?
-        console.log "save-url-to-disk: caught error 'empty body' with status #{@status-code} on #{@resolved}" unless body?
-        return cb null unless body?
-        err <~ @save-buffer-to-disk body
-        console.log "save-url-to-disk: caught error #{err} while saving #{@resolved}" if err?
-        cb null
-
-    set-html: (body) ->@elem.html body
-
-    to-string: ->
-        "#{@tag} #{@attr} #{@resolved} #{@filename}"
-
-class DeclTask extends Task
-    get-original: ->
-        pattern = //
-            (.*url\(['"]*)
-            (.+?)
-            (['"]*\).*)
-            //
-        @matches = pattern.exec @elem.value
-        return @original = null unless @matches?
-        @original = @matches[2] if @matches.length > 2
-
-    store-filename: ->
-        return unless @matches? and @matches.length > 2
-        @matches[2] = "#{@filename or @resolved}"
-        @elem.value = @matches .slice 1 .join ''
-        console.log @elem.property, @elem.value
-
-class FileTask extends Task
-    get-original: -> @original = @elem.attr @attr
-    store-filename: -> @elem.attr @attr, "#{@filename or @resolved}"
-
-class HtmlTask extends Task
-    get-original: ->
-        @original = @referer
-        @resolved = @original
-        @content-type = 'text/html'
-
-    store-filename: ->
-
-class ImportTask extends Task
-    get-original: ->
-        pattern = /^(.*url\(['"]*)(.+?)(['"]*\).*)/
-        @matches = pattern.exec @elem.import
-        return @original = null unless matches?
-        @original = @matches[2] if @matches.length > 2
-        console.log "ImportTask:get-original @original is #{@original}"
-
-    store-filename: ->
-        @matches[2] = "#{@filename or @resolved}"
-        @elem.import = @matches .slice 1 .join ''
-
-class Extractenator9000
-    not-useful: (t) ->
-        switch t.tag
-            | 'style' => false
-            | otherwise
-                not t.original?
-                or not t.resolved?
-                or not /^http/.test t.resolved
-                or t.resolved.slice(-1) == '/'
-                or url.parse t.original .hostname in config.CDN_HOSTS
-
-    load-task-list: ($) ->
-        task-list = []
-        $ 'a'                    .each -> task-list.push new FileTask org.uri, $(this), 'anchor', 'href'
-        $ 'script[src*=js]'      .each -> task-list.push new FileTask org.uri, $(this), 'script', 'src'
-        $ 'img:not([src^=data])' .each -> task-list.push new FileTask org.uri, $(this), 'img', 'src'
-        $ 'link[rel*=icon]'      .each -> task-list.push new FileTask org.uri, $(this), 'img', 'href'
-        $ 'link[rel=stylesheet]' .each -> task-list.push new StylesheetTask org.uri, $(this), 'css', 'href'
-        $ 'style'                .each -> task-list.push new StyleTask org.uri, $(this), 'css', 'href'
-        reject @not-useful, task-list
-        
-    process-css-buffer: (t, body, cb) ->
-        console.log body.toString!
-        # console.log "process-css-buffer: #{t.to-string!}"
-        obj = css.parse body.toString!, silent: true, source: t.referer
-        return cb null unless obj.stylesheet?
-        return cb null unless obj.stylesheet.rules?
-        err <~ @process-decl-list t, obj
-        return cb err if err?
-        err <~ @process-import-list t, obj
-        return cb err if err?
+# Override base class to parse contents as CSS and store a file.
+class CSSHandler extends FileHandler
+    # Override to parse `body` for @font-face and @import tags.  Both of these
+    # declarations contain `url()` parameters.  The URL values need to be
+    # retrieved and stored locally.
+    # @param  [String]    body  CSS content to modify
+    # @param  [Function]  cb    callback to handle (cb, parsedBody)
+    transform: (body, cb) ->
         try
-            console.log "process-css-buffer: stringifying the CSS, #{t.resolved}"
-            return cb null, css.stringify obj
+            css-obj = css.parse body.toString!, silent: true, source: @referer
+            return cb null, body unless css-obj.stylesheet?
+            return cb null, body unless css-obj.stylesheet.rules?
+            decls = css-obj.stylesheet.rules
+                |> map (.declarations)
+                |> flatten
+                |> compact
+
+            value-decls = decls |> filter @validate-value
+            if value-decls.length > 0
+                err <~ async.each decls, @transform-decl
+                if err?
+                    console.log "CSSHandler: transform #{err}"
+                    return cb null, body
+                return cb null, css.stringify css-obj
+
+            import-decls = decls |> filter @validate-import
+            if decls.length > 0
+                err <~ async.each decls, @transform-import
+                if err?
+                    console.log "CSSHandler: transform #{err}"
+                    return cb null, body
+                return cb null, css.stringify css-obj
+ 
         catch thrown
-            console.log "process-css-buffer: caught css.stringify error #{thrown}"
+            console.error "transform-css-buffer: caught css.stringify error #{thrown}"
             return cb null, body
 
-    process-css-file-task: (t, cb) ~>
-        # console.log "process-css-file-task: #{t.to-string!}"
-        (err, body) <~ t.read-resolved
+    # Common CSS element handler.
+    # @param  [Object]    rule  the CSS rule of interest
+    # @param  [String]    attr  attribute to examine for a URL
+    # @param  [Function]  cb    Callback to accept (err)
+    transform-common: (rule, attr, cb) ->
+        return cb null unless @attr in rule
+        handler = new FileHandler (@uri or @referer), rule, attr
+        (err) <- handler.run!
+        console.error "CSSHandler: #{err} while saving #{@handler.resolved}" if err?
         return cb err if err?
-        return cb null unless body?
-        (err, body) <~ @process-css-buffer t, body
-        #return cb err if err?
-        return cb null unless body?
-        t.save-buffer-to-disk body, cb
+        console.log "CSSHander: saved #{handler.filename}"
+        return cb null
 
-    process-decl-list: (t, obj, cb) ->
-        decls = obj.stylesheet.rules
-            |> map (.declarations)
-            |> flatten
-            |> compact
-            |> filter (declaration) -> /url/.test declaration.value
-        tasks = decls.map (it) -> new DeclTask t.resolved, it, '', ''
-        err <~ async.each tasks, (t, cb) -> t.save-url-to-disk cb
-        return cb err if err?
- 
-    process-import-list: (t, obj, cb) ->
-        decls = obj.stylesheet.rules
-            |> map (.import)
-            |> flatten
-            |> compact
-            |> filter (declaration) -> /url/.test declaration.import
-        #console.log "process-import-list: decls", decls
-        tasks = decls |> map (it) -> new ImportTask t.resolved, it, '', ''
-        err <~ async.each tasks, (t, cb) -> t.save-url-to-disk cb
-        return cb err       
+    # Transform a 'declaration' used by @font-face
+    # @param  [Object]    rule  the CSS rule of interest
+    # @param  [Function]  cb    Callback to accept (err)
+    transform-decl: (rule, cb) -> @transform-common rule, \value, cb
 
-    process-style-task: (t, cb) ->
-        # console.log "process-style-task: #{t.to-string!} parsing #{t.elem.html().length} bytes of embedded CSS, \n#{t.elem.html!}\n"
-        (err, body) <- @process-css-buffer t, t.get-html!
-        return cb err if err?
-        return cb null unless body?
-        t.set-html body
-        cb null
+    # Transform an @option rule
+    # @param  [Object]    rule  the CSS rule of interest
+    # @param  [Function]  cb    Callback to accept (err)
+    transform-import: (rule, cb) -> @transform-common rule, \import, cb
+    
+    # Return true if the @import contains a URL
+    # @param  [Object]    rule  the CSS rule of interest
+    validate-import: (rule) -> rule.property == \src
+    
+    # Return true if the @font-face contains a URL (typically it does...)
+    # @param  [Object]    rule  the CSS rule of interest
+    validate-value: (rule) -> /url/.test rule.option
 
-    process-task-list: (t, cb) ~>
-        # console.log "process-task-list: original is" t.original
-        switch t.tag
-            | \anchor => t.store-filename!; cb null
-            | \style => @process-style-task t, cb
-            | \css => @process-css-file-task t, cb
-            | otherwise => t.save-url-to-disk cb
+# Override base class to store CSS back in the element (not in a file)
+class StyleHandler extends CSSHandler
+    fetch: (cb) -> cb null, @elem .html!
+    save: (buffer, cb) -> @elem .html buffer ; cb null
+    store-filename: ->
 
-    read-html: (t, cb) ->      
-        if org.filename?
-            err, body <~ fs.readFile org.filename, encoding: \utf8
-            # console.log "run: retrieved #{body.length} bytes from #{org.filename}"
-            cb err, body
-        else
-            err, body <~ t.read-resolved
-            return cb err, body unless body?
-            # console.log "run: retrieved #{body.length} bytes from #{org.uri}"
-            cb err, body
-
-    run: (cb) ->
-        t = new HtmlTask org.uri, '', '', ''
-        (err, body) <~ @read-html t
-        return cb err if err?
+# Override base class to parse HTML, store the template tags and process
+# read, transform and store the DOM.
+class HTMLHandler extends FileHandler
+    # Override to process an HTML file.  Elements that may contain URLs to site
+    # files are read and processed.  Things like images and scripts are read 
+    # and stored.  CSS is parsed for URLs.  Those are read and stored.
+    transform: (body, cb) ->
         $ = cheerio.load body.to-string!, 'utf-8'
-        e = $ org.tag-selector
+        e = $ @get-org! .tag-selector
         switch e.length
-        | 0 => return cb "tag selector '#{org.tag-selector}' does not indentify a node"
+        | 0 => return cb "tag selector '#{@get-org! .tag-selector}' does not indentify a node"
         | 1 =>
-        | otherwise => return cb console.log "tag selector '#{org.tag-selector}' identifies #{e.length} nodes, must only identify one."
+        | otherwise => return cb console.log "tag selector '#{@get-org! .tag-selector}' identifies #{e.length} nodes, must only identify one."
         e.empty! .append config.TEMPLATE_TAGS
 
-        task-list = @load-task-list $
-        # console.log "run: task list contains #{task-list.length} tasks"
-        err <- async.each task-list, @process-task-list
+        task-list = []
+        $ 'a'                    .each -> task-list.push new AnchorHandler  @get-org!.uri, $(this), 'href'
+        $ 'img:not([src^=data])' .each -> task-list.push new FileHandler  @get-org!.uri, $(this), 'src'
+        $ 'link[rel*=icon]'      .each -> task-list.push new FileHandler  @get-org!.uri, $(this), 'href'
+        $ 'link[rel=stylesheet]' .each -> task-list.push new CSSHandler   @get-org!.uri, $(this), 'href'
+        $ 'script[src*=js]'      .each -> task-list.push new FileHandler  @get-org!.uri, $(this), 'src'
+        $ 'style'                .each -> task-list.push new StyleHandler @get-org!.uri, $(this), null
+ 
+        (err) <- async.each task-list, (t) -> t.run t, cb
         console.log "run: process-task-list returned err", err if err?
-        return cb err if err?
-        t.save-buffer-to-disk $.html!, cb
+        return cb err, body if err?
+        cb null, $.html!
 
-new Extractenator9000().run (err) ->
-    console.log err, "on", org.uri if err?
-    process.exit 0
+# Override the base class to retrieve HTML from an org and process it fully.
+class Extractenator9000 extends HTMLHandler
+    ->
+        super @get-org!.uri, null, null
+        @content-type = ''
+
+    # Override to use the URI from the org record as the resolved URL.
+    get-resolved: -> @get-org! .uri
+
+    # Override to use the URI in the Org record.
+    get-uri: -> @get-org! .uri
+    
+    # Override to not store the filename in a structure.
+    store-filename: ->
+
+# Application starts here.
+(err) <- new Extractenator9000().run
+console.error err, "on", @get-org! .uri if err?
+process.exit 0
