@@ -21,7 +21,7 @@ class AnchorHandler
 
     (@referer, @elem, @attr) ->
         @content-type = null
-        @org = null
+        @org = new Org()
         @resolved = null
         @url-object = null
         @uri = @get-uri!
@@ -45,12 +45,6 @@ class AnchorHandler
         | /font/.test @content-type => \font
         | otherwise ''
 
-    # Return the Org object for this run.  The Org object builds itself
-    # from file `spec.json`.  
-    get-org: ->
-        @org = new Org() unless @org?
-        @org
-
     # @return  [Object]  Organization object
     # Retrieve the URI's protocol.  Used in deciding how to read the URI
     # and where to store the URI contents.
@@ -65,7 +59,7 @@ class AnchorHandler
         url-obj = url.parse @uri
         return @uri if url-obj.host in config.CDN_HOSTS
         return @uri if @get-protocol! == 'data'
-        referer = switch @referer | null => @get-org! .uri | otherwise => @referer
+        referer = switch @referer | null => @org.uri | otherwise => @referer
         try unless @get-protocol!?
             @resolved = url.resolve @referer, @uri
         catch thrown
@@ -91,7 +85,7 @@ class AnchorHandler
 
     # Store the filename in the element instance variable.  Override this
     # method if there's not an element.
-    store-filename: -> @elem .attr @attr = @filename
+    store-filename: -> @elem .attr @attr = @filename; console.log @elem .attr @attr
 
 # Override base class to retrieve a file's contents and save it
 class FileHandler extends AnchorHandler
@@ -109,6 +103,15 @@ class FileHandler extends AnchorHandler
         @content-type = resp.headers.'content-type'
         return cb null, body if resp.status-code == 200
         cb null, null
+
+    # Instalce variable to return the `request` instance used in this class.
+    # The `request` instance contains Referer, User-Agent and cookies.
+    request: -> request.defaults do
+        jar: true
+        encoding: null
+        headers:
+            'Referer': @org.uri
+            'User-Agent': config.USER_AGENT    
 
     # Fetch a file, store it in the directory, then store the new filename in the
     # element instance variable.
@@ -133,22 +136,13 @@ class FileHandler extends AnchorHandler
         console.log "Handler: saved @filename"
         cb null
 
-    # Instalce variable to return the `request` instance used in this class.
-    # The `request` instance contains Referer, User-Agent and cookies.
-    request: request.defaults do
-        jar: true
-        encoding: null
-        headers:
-            'Referer':@get-org! .uri
-            'User-Agent': config.USER_AGENT    
-
     # Store the provided `buffer` using the content-type and the file's
     # basename.
     # @param  [Buffer|String] buffer contents to save
     # @param  [Function]      cb     callback to handle (err)
     save: (buffer, cb) ->
         # console.error "save-buffer-to-disk: #{@to-string!}"
-        @filename = path.join @get-org!.dir, @get-directory!, @get-basename!
+        @filename = path.join @org.dir, @get-directory!, @get-basename!
         local-filename = switch @filename.slice 0 1
             | '/' => @filename.slice 1
             | otherwise => @filename
@@ -209,7 +203,7 @@ class CSSHandler extends FileHandler
     # @param  [Function]  cb    Callback to accept (err)
     transform-common: (rule, attr, cb) ->
         return cb null unless @attr in rule
-        handler = new FileHandler (@uri or @referer), rule, attr
+        handler = new FileHandler @referer, rule, attr
         (err) <- handler.run!
         console.error "CSSHandler: #{err} while saving #{@handler.resolved}" if err?
         return cb err if err?
@@ -248,20 +242,20 @@ class HTMLHandler extends FileHandler
     # and stored.  CSS is parsed for URLs.  Those are read and stored.
     transform: (body, cb) ->
         $ = cheerio.load body.to-string!, 'utf-8'
-        e = $ @get-org! .tag-selector
+        e = $ @org.tag-selector
         switch e.length
-        | 0 => return cb "tag selector '#{@get-org! .tag-selector}' does not indentify a node"
+        | 0 => return cb "tag selector '#{@org.tag-selector}' does not indentify a node"
         | 1 =>
-        | otherwise => return cb console.log "tag selector '#{@get-org! .tag-selector}' identifies #{e.length} nodes, must only identify one."
+        | otherwise => return cb console.log "tag selector '#{@org.tag-selector}' identifies #{e.length} nodes, must only identify one."
         e.empty! .append config.TEMPLATE_TAGS
 
         task-list = []
-        $ 'a'                    .each -> task-list.push new AnchorHandler  @get-org!.uri, $(this), 'href'
-        $ 'img:not([src^=data])' .each -> task-list.push new FileHandler  @get-org!.uri, $(this), 'src'
-        $ 'link[rel*=icon]'      .each -> task-list.push new FileHandler  @get-org!.uri, $(this), 'href'
-        $ 'link[rel=stylesheet]' .each -> task-list.push new CSSHandler   @get-org!.uri, $(this), 'href'
-        $ 'script[src*=js]'      .each -> task-list.push new FileHandler  @get-org!.uri, $(this), 'src'
-        $ 'style'                .each -> task-list.push new StyleHandler @get-org!.uri, $(this), null
+        $ 'a'                    .each -> task-list.push new AnchorHandler  @org.uri, $(this), 'href'
+#        $ 'img:not([src^=data])' .each -> task-list.push new FileHandler  @org.uri, $(this), 'src'
+#        $ 'link[rel*=icon]'      .each -> task-list.push new FileHandler  @org.uri, $(this), 'href'
+#        $ 'link[rel=stylesheet]' .each -> task-list.push new CSSHandler   @org.uri, $(this), 'href'
+#        $ 'script[src*=js]'      .each -> task-list.push new FileHandler  @org.uri, $(this), 'src'
+#        $ 'style'                .each -> task-list.push new StyleHandler @org.uri, $(this), null
  
         (err) <- async.each task-list, (t) -> t.run t, cb
         console.log "run: process-task-list returned err", err if err?
@@ -271,19 +265,19 @@ class HTMLHandler extends FileHandler
 # Override the base class to retrieve HTML from an org and process it fully.
 class Extractenator9000 extends HTMLHandler
     ->
-        super @get-org!.uri, null, null
+        super @org.uri, null, null
         @content-type = ''
 
     # Override to use the URI from the org record as the resolved URL.
-    get-resolved: -> @get-org! .uri
+    get-resolved: -> @org.uri
 
     # Override to use the URI in the Org record.
-    get-uri: -> @get-org! .uri
+    get-uri: -> @org.uri
     
     # Override to not store the filename in a structure.
     store-filename: ->
 
 # Application starts here.
 (err) <- new Extractenator9000().run
-console.error err, "on", @get-org! .uri if err?
+console.error err, "on", @org.uri if err?
 process.exit 0
