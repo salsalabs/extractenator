@@ -29,8 +29,8 @@ will block any content that comes from a site with `http://` in the URL.
 ### Copying resources to Salsa
 
 Since getting HTTPS set up on a website can be complex and prohibitively expensive,
-Salsa provides a way to host the files and resources uses by your template.  The
-end result is that both the template and all of the resources that it uses are
+Salsa provides a way to host the files and resources used by your template.  The
+end result is that both the template, and all of the resources that it uses, are
 served up to browsers using HTTPS.  Doing this saves money for our customers and
 makes sure that pages like donation pages are secure when they are used.
 
@@ -111,8 +111,8 @@ This package contains a program that
 When the program is done, then
 * The template needs to be stored on Salsa as a template.
 * The files and their directories need to be transferred to Salsa's image repository. (Manual, but not that ugly.)
-## Still to do...
 
+## Still to do...
 * Automatically create a template on Salsa.
 * Automatically upload files to the image repository.
 
