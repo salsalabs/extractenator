@@ -18,16 +18,16 @@ export class AnchorHandler
     (@referer, @elem, @attr) ->
         @content-type = null
         @org = new Org()
-        @resolved = null
         @url-object = null
         @uri = @get-uri!
+        console.log "AnchorHandler(): @uri is #{@uri}"
 
     # @return returns the filename part of the basename.  No extra junk.
     clean-basename: (v) -> v .split /[\?\&\;\#]/ .0
 
     # @return returns the basename for the URI.
     get-basename: ->
-        basename = (path.basename @resolved .split '?')[0]
+        basename = (path.basename @get-resolved! .split '?')[0]
         return @clean-basename basename if path.extname basename .length > 0
         extension = (@content-type .split '/' .1)
         return @clean-basename "#{basename || ++@@serial-number}.#{extension}"
@@ -57,16 +57,15 @@ export class AnchorHandler
         return @uri if @get-protocol! == 'data'
         referer = switch @referer | null => @org.uri | otherwise => @referer
         try unless @get-protocol!?
-            @resolved = url.resolve @referer, @uri
+           resolved = url.resolve @referer, @uri
         catch thrown
             console.error "URL.resolve threw #{thrown}"
             console.error "referer is #{@referer}"
             console.error "original is #{@uri}"
             console.error "\n"
-            @resoived = @url
 
-        @uri-cache[@uri] = @resolved
-        @resolved
+        @@uri-cache[@uri] = resolved
+        resolved
 
     # @return returns the current URI.  Override this if your class does
     # not need a URI in an element.
@@ -77,8 +76,11 @@ export class AnchorHandler
     # @param  [Function]  cb  callback to handle (err)
     run: (cb) ->
         @get-resolved!
-        @store-filename!
+        if @get-resolved!? 
+            @filename = @get-resolved! or @uri
+            @store-filename!
+            console.log "Anchor:run @filename is #{@get-resolved!}"
 
     # Store the filename in the element instance variable.  Override this
     # method if there's not an element.
-    store-filename: -> @elem .attr @attr = @filename; console.log @elem .attr @attr
+    store-filename: -> @elem .attr @attr = @filename

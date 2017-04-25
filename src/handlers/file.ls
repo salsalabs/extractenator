@@ -14,12 +14,17 @@ export class FileHandler extends AnchorHandler
     # returned.
     # @param  [Function]  cb  callback to handle (cb, buffer)
     fetch: (cb) ->
+        console.log "File: fetch: protocol is #{@get-protocol!}"
         cb null, null if @get-protocol! == 'data'
-        (err, resp, body) <~ @request @resolved
+        console.log "File: fetch:reading #{@get-resolved!}"
+
+        (err, resp, body) <~ @request! .get @get-resolved!
+        console.log "File: fetch: @request returned error #{err}, status #{resp.status-code} #{body.length} bytes"
         if err?
-            console.err "fetch caught #{err} on {#@resolved}"
+            console.err "fetch caught #{err} on #{@get-resolved!}"
             return cb null, null
         @content-type = resp.headers.'content-type'
+        console.log "FileHandler.fetch: #{@get-resolved!} #{@content-type} #{resp.status-code}"
         return cb null, body if resp.status-code == 200
         cb null, null
 
@@ -36,19 +41,21 @@ export class FileHandler extends AnchorHandler
     # element instance variable.
     # @param  [Function]  cb  callback to handle (null).
     run: (cb) ->
-        (err, buffer) <- @fetch!
-        console.error "Handler: #{err} while fetching #{@resolved}" if err?
+        console.log "File.run"
+        (err, buffer) <~ @fetch!
+        console.log "File.run: @fetch returned erro #{err} and #{buffer.length} bytes"
+        console.error "Handler: #{err} while fetching #{@get-resolved!}" if err?
         return cb null if err?
     
-        console.error "Handler: empty buffer while fetching #{@resolved}" unless buffer?
+        console.error "Handler: empty buffer while fetching #{@get-resolved!}" unless buffer?
         return cb null unless buffer?
     
-        (err, buffer) <- @transform buffer
-        console.error "Handler: #{err} while transforming #{@resolved}" if err?
+        (err, buffer) <~ @transform buffer
+        console.error "Handler: #{err} while transforming #{@get-resolved!}" if err?
         return cb null if not buffer?
     
-        (err) <- @save buffer
-        console.error "Handler: #{err} while saving #{@resolved}" if err?
+        (err) <~ @save buffer
+        console.error "Handler: #{err} while saving #{@get-resolved!}" if err?
         return cb null if err?
 
         @store-filename!
@@ -62,6 +69,7 @@ export class FileHandler extends AnchorHandler
     save: (buffer, cb) ->
         # console.error "save-buffer-to-disk: #{@to-string!}"
         @filename = path.join @org.dir, @get-directory!, @get-basename!
+        console.log "FileHandler.save: @filename is #{@filename}"
         local-filename = switch @filename.slice 0 1
             | '/' => @filename.slice 1
             | otherwise => @filename
