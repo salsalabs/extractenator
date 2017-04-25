@@ -14,7 +14,7 @@
     "preinstall": "lsc --bare --compile --output lib src",
     "codo": "rm -rf doc; codo . --title 'The Extractenator.'",
     "local-server": "http-server",
-    "watch": "lsc -c -d -w -o lib src/*.ls &"
+    "watch": "lsc -c -d -w -o lib src &"
   },
   "dependencies": {
     "async": "*",
