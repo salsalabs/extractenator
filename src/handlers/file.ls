@@ -1,12 +1,13 @@
 require! {
-    './config'
+    '../config'
     'fs-extra': fs
     path
     request
+    './anchor': { AnchorHandler }
 }
 
 # Override base class to retrieve a file's contents and save it
-class FileHandler extends AnchorHandler
+export class FileHandler extends AnchorHandler
     # Retrieve the contents of the instance URI.  A null is returned if
     # the URI fails or the returned contents are empty.  If the HTTP status
     # code is not 200 (success), then the buffer from the website is
@@ -14,9 +15,9 @@ class FileHandler extends AnchorHandler
     # @param  [Function]  cb  callback to handle (cb, buffer)
     fetch: (cb) ->
         cb null, null if @get-protocol! == 'data'
-        (err, resp, body) <~ @request @resolved!
+        (err, resp, body) <~ @request @resolved
         if err?
-            console.err "fetch caught #{err} on {#@resolved!}"
+            console.err "fetch caught #{err} on {#@resolved}"
             return cb null, null
         @content-type = resp.headers.'content-type'
         return cb null, body if resp.status-code == 200

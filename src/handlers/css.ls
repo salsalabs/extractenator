@@ -2,11 +2,11 @@ require! {
     async
     css
     'prelude-ls': { compact, each, filter, flatten, map } 
-    './handlers/file': { FileHandler }
+    './file': { FileHandler }
 }
 
 # Override base class to parse contents as CSS and store a file.
-class CSSHandler extends FileHandler
+export class CSSHandler extends FileHandler
     # Override to parse `body` for @font-face and @import tags.  Both of these
     # declarations contain `url()` parameters.  The URL values need to be
     # retrieved and stored locally.

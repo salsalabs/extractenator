@@ -1,15 +1,15 @@
 require! {
     async
     cheerio
-    './handlers/anchor': { AnchorHandler }
-    './handlers/css': { CSSHandler }
-    './handlers/file': { FileHandler }
-    './handlers/style': { StyleHandler }
+    './anchor': { AnchorHandler }
+#    './css': { CSSHandler }
+    './file': { FileHandler }
+#    './style': { StyleHandler }
 }
 
 # Override base class to parse HTML, store the template tags and process
 # read, transform and store the DOM.
-class HTMLHandler extends FileHandler
+export class HTMLHandler extends FileHandler
     # Override to process an HTML file.  Elements that may contain URLs to site
     # files are read and processed.  Things like images and scripts are read 
     # and stored.  CSS is parsed for URLs.  Those are read and stored.

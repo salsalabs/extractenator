@@ -1,15 +1,15 @@
 require! {
-    './config'
+    '../config'
     css
     path
     request
     url
-    './org': { Org }
+    '../org': { Org }
 }
 
 # Base class that resolves an element's contents using the org's URi
 # then updates the element.
-class AnchorHandler
+export class AnchorHandler
     # Class variable to contain a serial number for file disambiguation.
     @serial-number = 0
     # Class variable to cache URIs so that they are only processed once
@@ -46,7 +46,7 @@ class AnchorHandler
     # and where to store the URI contents.
     get-protocol: ->
         @url-object = url.parse @get-uri! unless @url-object?
-        @url-obj.protocol
+        @url-object.protocol
 
     # @return  Resolve the current URI against the site URL or the current
     # referer.  This should make for clean URIs in `fetch`
