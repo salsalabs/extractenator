@@ -20,7 +20,7 @@ export class AnchorHandler
         @org = new Org()
         @url-object = null
         @uri = @get-uri!
-        console.log "AnchorHandler(): @uri is #{@uri}"
+        # console.log "AnchorHandler(): @uri is #{@uri}"
 
     # @return returns the filename part of the basename.  No extra junk.
     clean-basename: (v) -> v .split /[\?\&\;\#]/ .0
@@ -54,16 +54,19 @@ export class AnchorHandler
         return @@uri-cache[@uri] if @uri in @@uri-cache
         url-obj = url.parse @uri
         return @uri if url-obj.host in config.CDN_HOSTS
-        return @uri if @get-protocol! == 'data'
+        return @uri if url-obj.protocol == 'data'
         referer = switch @referer | null => @org.uri | otherwise => @referer
-        try unless @get-protocol!?
+        console.log "Anchor.get-resolved: protocol is #{@get-protocol!} @referer is #{@referer} uri is #{@uri}"
+        try if @get-protocol!?
            resolved = url.resolve @referer, @uri
+           console.log "Anchor.get-resolved: resolved URI is #{resolved}"
         catch thrown
             console.error "URL.resolve threw #{thrown}"
             console.error "referer is #{@referer}"
             console.error "original is #{@uri}"
             console.error "\n"
 
+        console.log "Anchor.get-resolved: returning resolved #{resolved}"
         @@uri-cache[@uri] = resolved
         resolved
 
@@ -75,11 +78,9 @@ export class AnchorHandler
     # to add any I/O in your subclass.
     # @param  [Function]  cb  callback to handle (err)
     run: (cb) ->
-        console.log "Anchor.run: uri is #{@uri}, resolved is #{@get-resolved!}"
-        #if @get-resolved!? 
+        # console.log "Anchor.run: uri is #{@uri}, resolved is #{@get-resolved!}"
         @filename = @get-resolved! or @uri
         @store-filename!
-        # console.log "Anchor:run @filename is #{@get-resolved!}"
         cb null
 
     # Store the filename in the element instance variable.  Override this

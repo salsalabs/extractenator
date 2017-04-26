@@ -14,12 +14,13 @@ export class FileHandler extends AnchorHandler
     # returned.
     # @param  [Function]  cb  callback to handle (cb, buffer)
     fetch: (cb) ->
+        console.log "File.fetch: attr is #{@attr}, elem is not null? #{@elem?} uri is #{@uri}, referer is #{@referer} resolved is #{@get-resolved!}"
         cb null, null if @get-protocol! == 'data'
         console.log "File: fetch:reading #{@get-resolved!}"
 
         (err, resp, body) <~ @request! .get @get-resolved!
         if err?
-            console.err "fetch caught #{err} on #{@get-resolved!}"
+            console.error "fetch caught #{err} on #{@get-resolved!}" if err?
             return cb null, null
         @content-type = resp.headers.'content-type'
         return cb null, body if resp.status-code == 200
@@ -41,6 +42,7 @@ export class FileHandler extends AnchorHandler
         console.log "File.run"
         (err, buffer) <~ @fetch!
         console.error "Handler: #{err} while fetching #{@get-resolved!}" if err?
+        console.log "Handler: #{@resolved} yielded #{(buffer or []).length} bytes."
         return cb null if err?
     
         console.error "Handler: empty buffer while fetching #{@get-resolved!}" unless buffer?
