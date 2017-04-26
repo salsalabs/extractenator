@@ -3,9 +3,9 @@ require! {
     cheerio
     './anchor': { AnchorHandler }
     '../config'
-#    './css': { CSSHandler }
+    './css': { CSSHandler }
     './file': { FileHandler }
-#    './style': { StyleHandler }
+    './style': { StyleHandler }
 }
 
 # Override base class to parse HTML, store the template tags and process
@@ -26,14 +26,13 @@ export class HTMLHandler extends FileHandler
         u = @org.uri
         task-list = []
         $ 'a'                    .each -> task-list.push new AnchorHandler u, $(this), 'href'
-        $ 'img:not([src^=data])' .each -> task-list.push new FileHandler u, $(this), 'src'
-        $ 'link[rel*=icon]'      .each -> task-list.push new FileHandler  u, $(this), 'href'
-#        $ 'link[rel=stylesheet]' .each -> task-list.push new CSSHandler   u, $(this), 'href'
-        $ 'script[src*=js]'      .each -> task-list.push new FileHandler  u, $(this), 'src'
-#        $ 'style'                .each -> task-list.push new StyleHandler u, $(this), null
+        $ 'img:not([src^=data])' .each -> task-list.push new FileHandler   u, $(this), 'src'
+        $ 'link[rel*=icon]'      .each -> task-list.push new FileHandler   u, $(this), 'href'
+        $ 'script[src]'          .each -> task-list.push new FileHandler   u, $(this), 'src'
+#        $ 'link[rel=stylesheet]' .each -> task-list.push new CSSHandler    u, $(this), 'href'
+        $ 'style'                .each -> task-list.push new StyleHandler u, $(this), null
  
-        runner = (t, cb) -> t.run cb
-        (err) <- async.each task-list, runner
+        (err) <- async.each task-list, (t, cb) -> t.run cb
         console.log "run: process-task-list returned err", err if err?
         return cb err, body if err?
         cb null, $.html!
