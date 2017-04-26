@@ -56,7 +56,6 @@ export class AnchorHandler
         return @uri if url-obj.host in config.CDN_HOSTS
         return @uri if url-obj.protocol == 'data'
         referer = switch @referer | null => @org.uri | otherwise => @referer
-        console.log "Anchor.get-resolved: protocol is #{@get-protocol!} @referer is #{@referer} uri is #{@uri}"
         try if @get-protocol!?
            resolved = url.resolve @referer, @uri
            console.log "Anchor.get-resolved: resolved URI is #{resolved}"
@@ -66,7 +65,6 @@ export class AnchorHandler
             console.error "original is #{@uri}"
             console.error "\n"
 
-        console.log "Anchor.get-resolved: returning resolved #{resolved}"
         @@uri-cache[@uri] = resolved
         resolved
 
@@ -85,4 +83,4 @@ export class AnchorHandler
 
     # Store the filename in the element instance variable.  Override this
     # method if there's not an element.
-    store-filename: -> @elem .attr @attr, @get-resolved!
+    store-filename: -> @elem .attr @attr, @filename

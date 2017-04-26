@@ -41,23 +41,24 @@ export class FileHandler extends AnchorHandler
     run: (cb) ->
         console.log "File.run"
         (err, buffer) <~ @fetch!
-        console.error "Handler: #{err} while fetching #{@get-resolved!}" if err?
-        console.log "Handler: #{@resolved} yielded #{(buffer or []).length} bytes."
+        console.error "File: #{err} while fetching #{@get-resolved!}" if err?
+        console.log "File: #{@get-resolved!}, #{(buffer or []).length} bytes, buffer? is #{buffer?}"
         return cb null if err?
     
-        console.error "Handler: empty buffer while fetching #{@get-resolved!}" unless buffer?
+        console.error "File: empty buffer while fetching #{@get-resolved!}" unless buffer?
         return cb null unless buffer?
-    
+
+        console.log "File: transforming #{@get-resolved!}, #{(buffer or []).length} bytes."
         (err, buffer) <~ @transform buffer
-        console.error "Handler: #{err} while transforming #{@get-resolved!}" if err?
+        console.error "File: #{err} while transforming #{@get-resolved!}" if err?
         return cb null if not buffer?
     
         (err) <~ @save buffer
-        console.error "Handler: #{err} while saving #{@get-resolved!}" if err?
+        console.error "File: #{err} while saving #{@get-resolved!}" if err?
         return cb null if err?
 
         @store-filename!
-        # console.log "Handler: saved @filename"
+        # console.log "File: saved @filename"
         cb null
 
     # Store the provided `buffer` using the content-type and the file's
@@ -75,6 +76,7 @@ export class FileHandler extends AnchorHandler
         return cb null if err?
 
         err <~ fs.writeFile local-filename, buffer, encoding: null
+        console.log "File.save: saved #{@get-uri!} to #{@filename or 'null'}"
         return cb err
 
     # Method to transform and return the contents of the provilded `buffer`.
