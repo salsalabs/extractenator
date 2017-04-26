@@ -27,7 +27,7 @@ export class HTMLHandler extends FileHandler
         task-list = []
         $ 'a'                    .each -> task-list.push new AnchorHandler u, $(this), 'href'
         $ 'img:not([src^=data])' .each -> task-list.push new FileHandler u, $(this), 'src'
-#        $ 'link[rel*=icon]'      .each -> task-list.push new FileHandler  u, $(this), 'href'
+        $ 'link[rel*=icon]'      .each -> task-list.push new FileHandler  u, $(this), 'href'
 #        $ 'link[rel=stylesheet]' .each -> task-list.push new CSSHandler   u, $(this), 'href'
         $ 'script[src*=js]'      .each -> task-list.push new FileHandler  u, $(this), 'src'
 #        $ 'style'                .each -> task-list.push new StyleHandler u, $(this), null
