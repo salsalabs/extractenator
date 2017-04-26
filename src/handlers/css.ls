@@ -26,7 +26,6 @@ export class CSSHandler extends FileHandler
             if value-decls.length > 0
                 err <~ async.each decls, @transform-decl
                 if err?
-                    console.log "CSSHandler: transform #{err}"
                     return cb null, body
                 return cb null, css.stringify css-obj
 
@@ -34,7 +33,6 @@ export class CSSHandler extends FileHandler
             if decls.length > 0
                 err <~ async.each decls, @transform-import
                 if err?
-                    console.log "CSSHandler: transform #{err}"
                     return cb null, body
                 return cb null, css.stringify css-obj
  
@@ -52,7 +50,6 @@ export class CSSHandler extends FileHandler
         (err) <- handler.run!
         console.error "CSSHandler: #{err} while saving #{@handler.resolved}" if err?
         return cb err if err?
-        console.log "CSSHander: saved #{handler.filename}"
         return cb null
 
     # Transform a 'declaration' used by @font-face

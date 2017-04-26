@@ -32,7 +32,8 @@ export class HTMLHandler extends FileHandler
 #        $ 'script[src*=js]'      .each -> task-list.push new FileHandler  u, $(this), 'src'
 #        $ 'style'                .each -> task-list.push new StyleHandler u, $(this), null
  
-        (err) <- async.each task-list, (t) -> t.run t, cb
+        runner = (t, cb) -> t.run cb
+        (err) <- async.each task-list, runner
         console.log "run: process-task-list returned err", err if err?
         return cb err, body if err?
         cb null, $.html!

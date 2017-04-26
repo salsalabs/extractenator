@@ -75,12 +75,13 @@ export class AnchorHandler
     # to add any I/O in your subclass.
     # @param  [Function]  cb  callback to handle (err)
     run: (cb) ->
-        @get-resolved!
-        if @get-resolved!? 
-            @filename = @get-resolved! or @uri
-            @store-filename!
-            console.log "Anchor:run @filename is #{@get-resolved!}"
+        console.log "Anchor.run: uri is #{@uri}, resolved is #{@get-resolved!}"
+        #if @get-resolved!? 
+        @filename = @get-resolved! or @uri
+        @store-filename!
+        # console.log "Anchor:run @filename is #{@get-resolved!}"
+        cb null
 
     # Store the filename in the element instance variable.  Override this
     # method if there's not an element.
-    store-filename: -> @elem .attr @attr = @filename
+    store-filename: -> @elem .attr @attr, @get-resolved!
