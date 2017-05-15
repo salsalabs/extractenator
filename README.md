@@ -1,17 +1,20 @@
 # Better Template Extractor for Salsalabs
 
-Extractenator is a program that accepts a URL from your website and creates a 
+Extractenator 9000 is a program that accepts a URL from a website and creates a 
 Salsa template.  Salsa templates can be thought of as picture frames that surround
-each Salsa page.  Templates provide the look-and-feel of your website so that 
-your Salsa pages look the same as your website.
+each Salsa page.  Templates provide the look-and-feel of a website so that 
+ Salsa pages look the same as your website.
 
-# Table of Contents
+## Table of Contents
 
-## <a href="#background">Background</a>
-## <a href="#legalities">Legalities</a>
-## <a href="#summary">Summary</a>
-## <a href="#installation">Installation</a>
-## <a href="#make_it_go">Make it go!</a>
+- <a href="#background">Background</a>
+- <a href="#legalities">Legalities</a>
+- <a href="#summary">Summary</a>
+- <a href="#installation">Installation</a>
+- <a href="#make_it_go">Make it go!</a>
+- <a href="#delivery">Delivery</a>
+- <a href="#troubleshooting">Troubleshooting</a>
+- <a href="#questions">Questions?</a>
 
 <a name="background"></a>
 ## Background
@@ -46,7 +49,7 @@ from your website after the template is extracted.  That resource will more than
 likely not be secure.  The browser will block it and your donor won't have the
 locked padlock that they want to see.
 
-# Why "better template extractor?"
+## Why "better template extractor?"
 
 At this writing, the Salsa template extractor is an ancient thing thing does not 
 always extract pages correctly.  This causes both Salsa and its clients tons of 
@@ -58,7 +61,7 @@ is modified to correctly reference the downloaded files.
 
 In addition, Extractenator successfully extracts files that Salsa's extractor
 simply cannot handle.  Extractenator does the right thing with URLs requested from
-websites, thus avoiding the `403` errors that plagues clients using the Salsa
+websites, thus avoiding the `403` and `500` errors that plagues clients using the Salsa
 extractor.
 
 Extractentator also searches
@@ -68,7 +71,7 @@ or background image appear.
 
 This is definite upside for Salsa's clients.  Salsa's clients are outstanding at
 their jobs, but generally are not familiar with the internals of CSS.  Extractenator
-acknowledges that and does the right thing so that thehy don't have to be CSS gurus
+acknowledges that and does the right thing so that they don't have to be CSS gurus
 to use Salsa.
 
 The resulting templates are both clean and secure.  Resource
@@ -82,146 +85,263 @@ My hope is that this free-and-open version template extractor will reduce headac
 and cost for all of us and leave us a bit more time for drinking really good coffee!
 
 <a name="legalities"></a>
-# Legalities (really short)
+## Legalities (really short)
 
 Licensing terms and conditions may be found in the file `LICENSING` in the same
 directory as this file. **Do not** contact Salsalabs Support about this package.
 You will be sorely disappointed and they will be pissed off.
 
 <a name="got_a_problem"></a>
-# Got a problem?
-[Click here] (https://github.com/salsalabs/extractenator/issues "Click here
+## Got a problem?
+[Click here](https://github.com/salsalabs/extractenator/issues "Click here
 to report any problems with the Extractenator") to report problems,
 make suggestions, offer funding or pass along a good joke.  Griping, whining
 and error reports that don't provide concrete examples may be deleted without
 being read.  Just sayin'...
 
 <a name="summary"></a>
-# Summary
+## Summary
 
 This package contains a program that
 
-* Accepts a URL to be extracted
-* Reads all of the resource files and stores them locally.
-* Modifies the template to reference the local files as relative files.  The file structure is the same as in Salsa.
+* Reads a JSON configuration file that describes the extraction session.
+* Reads the cotnents of an HTML page.
+* Reads the pages resource files (CSS, script image) and stores them locally.
+* Modifies the template to reference the resource files as relative files in a Salsa image browser.
+* Modifies CSS files to reference resources as relative files in a Salsa image browser.
+* Replaces a specified HTML element with Salsa's template tags.
 * Saves the template to disk.
-* Reads each CSS file, stores the resources and modifies the CSS to reference a local file.
-* Saves each CSS file to disk.
 
-When the program is done, then
-* The template needs to be stored on Salsa as a template.
+When the program is done
+* The template references files in a Salsa image browser structure.
+* CSS files references files in a Salsa image browser structure.
 * The files and their directories need to be transferred to Salsa's image repository. (Manual, but not that ugly.)
-## Still to do...
+
+### Still to do...
 
 * Automatically create a template on Salsa.
 * Automatically upload files to the image repository.
 
 <a name="installation"></a>
-# Installation
+## Installation
 
-## Prerequisites
-Before installation, you should have these software packages installed:
+### Prerequisites
+Installing Extractenator 9000 requires these software packages.
 
 1. [Node.js](http://nodejs.org/ "Node.js's Homepage")
 2. [LiveScript](http://livescript.net/ "LiveScript's Homepage")
 3. [Git](http://git-scm.com/ "Homepage for the Git source control program")
 
-## Getting Extractentator
+A really, really easy way to install Node and LiveScript is to start with the [Node Versio manager (nvm)](https://github.com/creationix/nvm).  Use the installation steps to install `nvm` in your Linux/OSX home dir.  When you log back in again, then you can use these commands to install the correct version of node and LiveScript:
+
+```bash
+nvm install 6
+nvm use 6
+npm install -g livescript
+```
+The commands install the latest 6.x.x version of `node`, then the latest version of `LiveScript`.
+
+### Setup
 * Clone the [Extractenator repository](https://github.com/salsalabs/extractenator)
 ```bash
 cd YOUR_WORKSPACE_DIRECTORY
 git clone https://github.com/salsalabs/extractenator.git
 ```
-* Retrieve the resources needed by Extractenator.
+* Update the environment by installing the node packages used by Extractenator 9000.
+
 ```bash
 cd extractenator
-npm update
-npm run prebuild
+npm run build
 ```
-Ignore any warnings.  If there are errors then [please report them here.]
-(https://github.com/salsalabs/extractenator/issues
+* Ignore any warnings.
+* [Report errors here.](https://github.com/salsalabs/extractenator/issues
 "Click here to report any problems with the Extractenator")
-* That's it!  Extractenator is ready to use!
+
+That's it!  Extractenator is ready to use!
 
 <a name="make_it_go"></a>
 # Make it go!
 
-The extraction part of Extractenator is started from the command line.  Use 
-`--help` to see a list of options.
+## Create a template
+The first step to extracting a template is to create a new template in Salsa HQ.  The best way to do that is to create a blank template, then download it.
+
+* [Click here](https://help.salsalabs.com/hc/en-us/articles/115000039353-Create-a-blank-empty-template) to learn how to create a blank template.
+
+* [Click here](https://help.salsalabs.com/hc/en-us/articles/223342307-Web-Templates) to read about web templates.  Search for "Download" to get to the relevant pieces.
+
+Downloading a template creates a directory in the image browser.  The directory name is the `template_KEY` for the template.  For best results, retrieve the `template_KEY` after the download.  We'll use it in the next step.
+
+### Configuration
+An Extractenator 9000 session reads from a web page and creates a directory structure that can be copied (maually) to Salsa.  Each session requires `spec.json` file.  `spec.json` is a JSON-formatted file the specifies what needs to be copied and where it needs to go.
+
+The first step after installation is to copy the `spec.json` template to create a new `spec.json`.
+
 ```bash
 cd YOUR_WORKSPACE_DIRECTORY/extractenator
-node lib/app --help
+cp spec-temmplate.json spec.json
 ```
-Which should return something like this:
-```
-  Usage: app.coffee [options]
+Here's a sample of a new spec.json file:
 
-  Read a URL and extract a Salsa template from it.
+```JSON
+{
+    "name": "just-a-name",
+    "uri": "read-this-to-create-template",
+    "filename": null,
+    "organization-key": a-number,
+    "chapter-key": null,
+    "template-key":  a-number,
+    "tag-selector": "#css-selector-to-element-that-will-surround-templates"
+}
+```
 
-  Options:
+### Configuration file details
+the `spec.json` file contains a list of fields that guide Extractenator 9000.  This section descripbes each field in detail.
 
-    -h, --help    output usage information
-    --url <text>  URL to read
-    --dir <text>  directory where the temlate and all resource files are stored.
-```
-All arguments are required.  Failure to provide one or more arguments gets
-this treatment:
-```
-Error: All arguments are required!
-  at Object.<anonymous> (/home/ubuntu/workspace/src/app.coffee:17:11)
-  at Object.<anonymous> (/home/ubuntu/workspace/src/app.coffee:2:1)
-  at Module._compile (module.js:456:26)
-```
-Here's an example extraction:
+### A note on `spec.json`'s file format
 
+JSON files have a very specific format.  All of the punctation in the `spec.json` file is required and should not be modified.  Field names are on the left, values are on the right.  Field names should not be modified.  Numeric values do not have quotation marks.  Neither does the word `null`.  All other values must have quotation marks.
+
+
+| Field            | Value  |
+| ---------------- |--- |
+| name             | Just a name.  Use something short.|
+| uri              | The URL of the page to use to create the template.  If the site has a very fancy first page, then find a page that only has text on it. "Who we are" and staff pages are best. |
+| filename         | (Optional).  If the contents of the URL are  just impossible to use, then the `filename` field contains a file on disk to use instead of a URL on the web.  If `filename` appears, then Extractenator 9000 ignores the `uri` parameter.  This is a last-ditch thing to do.  You should _not_ use the filename unless there's a bunch of money involved and the website is impossible. For example, big dollars that make the regrettable Wix decision. |
+| organization-key | The client's organization KEY |
+| chapter-key      | (Optional) the client's chapter key.  If supplied, then Extractenator 9000 will add the `chapter-key` to the directory structure where files are stored.  That's a Salsa-required thing. |
+| template-key     | The value of `template_KEY` for the template prepared in the next step. The prep process takes care of creating the necessary directories in the client's image directory. |
+| tag-selector     | The CSS selector for the part of the web page that will be replaced by Salsa content.  See the description below.|
+
+### Retrieving the CSS slector.
+
+Extractenator needs a CSS selector to know which HTML element on the page will contain Salsa content.  Here are some steps that you can use to retrieve that selector.
+
+1. Open the site's URL with Chrome.  (Yes, Chrome.  Firefox won't do...)
+2. Search the site for the HTML element that will contain Salsa content.  Find the one that has the right margins and that you can imagine Salsa pages appearing in.
+3. Inspect the selected element.  A lot of the page will be light blue when you do that.
+4. Right-click on the selected element in the "Element" view of the browser tools.
+5. Choose "Copy Selector".
+6. Paste the copied selector into the value field for the `tag-selector` field.  Make sure that it's surrounded with quotation marks (_not_ apostrophes!)|
+
+### Verify `spec.json`.
+Use this command to verify that `spec.json` is formatted correctly.
+
+```bash
+node spec.json
 ```
-cd workspace/extractenator
-node lib/app --url http://helpthelittlechipmunks/about-us.html --directory HTLC
+
+If nothing appears after the command, then the file is ready to use.  If you see any messages, then decode them and fix the file.  Continue to use node to check the file until there are no messages.
+
+<a name="execution"></a>
+## Execution
+
+Running the application is straightforward.  Open a terminal and type these commands.
+
+```bash
+cd YOUR_WORKSPACE_DIRECTORY/extractenator
+node lib/app
 ```
-When this example completes, directory `HTLC` will have a structure like this:
-```
-HTLC
-HTLC/registry.json
-HTLC/template.html
-HTLC/working_template.html
-HTLC/application
-HTLC/application/javascript
-HTLC/application/javascript/jquery.cookie.js
-HTLC/application/javascript/script.js
-HTLC/application/javascript/plugins.js
-HTLC/application/x-javascript
-HTLC/application/x-javascript/buttons.js
-HTLC/application/x-javascript/modernizr-1.7.min.js
-HTLC/image
-HTLC/image/jpeg
-HTLC/image/jpeg/Protests.jpg
-HTLC/image/jpeg/slider.jpg
-HTLC/image/jpeg/web.jpg
-HTLC/image/jpeg/cruiseship.jpg
-HTLC/image/jpeg/Slider.jpg
-HTLC/image/vnd.microsoft.icon
-HTLC/image/vnd.microsoft.icon/favicon.ico
-HTLC/image/gif
-HTLC/image/gif/icon_alert_new.gif
-HTLC/image/png
-HTLC/image/png/icons-social.png
-HTLC/image/png/logo.png
-HTLC/image/png/none.png
-HTLC/image/png/sort_paginate.png
-HTLC/image/png/chipmunk1.png
-HTLC/image/png/down.png
-HTLC/image/png/icons-8.png
-HTLC/image/png/logo-print.png
-HTLC/image/png/up.png
-HTLC/image/png/logo-mobile.png
-HTLC/image/png/logo-tv.png
-HTLC/image/png/ungraded.png
-HTLC/text
-HTLC/text/javascript
-HTLC/text/javascript/chippy.js
-HTLC/text/javascript/jsapi
-HTLC/text/css
-HTLC/text/css/1.css
-```
-The file `template.html` will be the template to send to Salsa.  All of the resource
-URLs have been resolved to Salsa URLs and the template has been modified.
+When execution is done, resource files (`HTML`, `CSS`, images, scripts, etc.) will have been copied, modified as needed, and stored onto your disk drive.
+
+<a name="delivery"></a>
+## Delivery
+
+Extractenator 9000 stores the modified template and all of the files in a local directory ("./o").  The directory structure exactly matches the structure uses by Salsa's own template extractor.  
+
+Delivery involves using a Salsa image browser window to copy files from "./o" to several folkders in the image browsser.  When that's done correctly,  all references to resource files (CSS, scripts, images, fonts) will work correctly.
+
+### Background (do not skip this part, K?)
+Extractenator 900 stores resources for a template in a directory that contains
+
+* organization_KEY
+* (optional) chapter_KEY
+* template_KEY
+
+Specifically, Extractenator 9000 stores resources on disk in a directory structure that matches the Salsa-standard relative URL for uploaded images and files.  
+
+`/o/[[organization_KEY]]/[[images]]/[[template_KEY]]`
+
+The directory structure changes a bit if images and files are storef for a chapter.
+
+`/o/[[organization_KEY]]/c/[[chapter_KEY]]/[[images]]/[[template_KEY]]`
+
+In both cases, the extracted files will go into the `[[template_KEY]]` directory.  The template keys are always numeric and always appear at the top of the list of directories in the image viewer.
+
+![Image Viewer Directories](./images/image_directory_dialog.png)
+
+# Delivering files to Salsa
+Delivery is currently an intensely manual process.  You will use the Salsa image browser to move all of the files one at a time.  
+
+Here are some steps that you can use.
+
+1. Login to Salsa HQ as the client.
+2. Navigate to any page that uses the What You See Is What You Get (WYSIWYG) editor.
+3. Choose the "image" tool from the editor's tool bar.
+![Image Viewer Dialog](./images/images_tool.png)
+4. The image tool dialog will appear.
+![Image Viewer Dialog](./images/image_browser_dialog.png)
+5. Click the `Browse Server` button.
+6. The image directory will appear.
+![Image Viewer Directories](./images/image_directory_dialog.png)
+7. Click on the folder for the `template-key` in `spec.json`.
+8. Use the `Create New Folder` button to create these directories:
+    * `css`
+    * `font`
+    * `image`
+    * `script`
+
+9. Once the directories are created, then use these steps for each directory.
+    1. Click to open the directory.
+    2. Manually copy all of the files from the same directory on disk.  For example, click in the `css` folder, then copy files from `./o/[[organization_KEY]]/[[images]]/[[template_KEY]]/css` into it.
+    3. Verify that all of the files are moved.
+10. Test the template.
+
+<a name="troubleshooting"></a>
+## Troubleshooting
+
+Start by reading the doc about [managing images and files](https://help.salsalabs.com/hc/en-us/articles/223342727-Managing-files-uploaded-to-Salsa).  This is not an optional step, so just click it and read.  
+
+### Template is missing a font or image.
+
+1. Copy the missing file from the client's website.
+2. Use the image browser to upload the file to Salsa.  To keep this consistent, you should put the missing file in the correct directory on Salsa (`css`, `font`, `image`, `script`, etc.).
+3. Edit the template to update the image (font, etc) URL.  Replace the URL with the Salsa relative URL.  For example, 
+
+`2. Use the image browser to upload the file to Salsa.  To keep this consistent, you should put the missing file in the correct directory on Salsa (`css`, `font`, `image`, `script`, etc.).`
+
+### CSS file is missing a font or image.
+
+1. Copy the missing file from the client's website.
+2. Use the image browser to upload the file to Salsa. 
+3. Find the CSS file on your disk.  For example
+
+`./o/123456/images/5432/css/fontawesome.css`
+
+4. Copy the file and rename the copy to have "-1" in the name (or -2 or -3 depending on how successful you are).
+
+`./o/123456/images/5432/css/fontawesome-1.css`
+
+5. Edit the new CSS file to update the image (font, etc) URL.  Replace the URL with the Salsa relative URL.  For example, 
+
+`<img src="/o/123456/images/5432/image/whatever.png">`
+
+6. If there are a bunch of fonts involved, then you really should copy them all and edit the file with all of the font filenames so that you don't have to repeat this process.
+
+7. Save the modified CSS file.
+8. Use the image browser to upload the file to Salsa.  To keep this consistent, you should put the missing file in the `css` directory.
+9. Edit the new template.
+10. Replace the CSS URL with the URL for the new file.  For example, change
+
+`<link href="/o/123456/images/5432/css/fontawesome.css" />`
+
+to
+
+`<link href="/o/123456/images/5432/css/fontawesome-1.css" />`
+
+11. Save the template.
+12. Test!
+
+<a name="questions"></a>
+## Questions?
+
+If you work for Salsa, then you can contact the author directly.  He's gonna be right there in the room.  If you do not work for Salsa, then [click here](#)
