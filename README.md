@@ -87,7 +87,7 @@ and cost for all of us and leave us a bit more time for drinking really good cof
 <a name="legalities"></a>
 ## Legalities (really short)
 
-Licensing terms and conditions may be found in the file `LICENSING` in the same
+Licensing terms and conditions may be found in the file `LICENSE` in the same
 directory as this file. **Do not** contact Salsalabs Support about this package.
 You will be sorely disappointed and they will be pissed off.
 
