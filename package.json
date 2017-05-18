@@ -9,12 +9,13 @@
     "url": ""
   },
   "scripts": {
-    "prebuild": "lsc --bare --compile --output lib src",
-    "build": "npm shrinkwrap; npm pack",
+    "prebuild": "npm update",
+    "build": "lsc --bare --compile --output lib src",
     "preinstall": "lsc --bare --compile --output lib src",
     "codo": "rm -rf doc; codo . --title 'The Extractenator.'",
     "local-server": "http-server",
-    "watch": "lsc -c -d -w -o lib src/*.ls &"
+    "watch": "lsc -c -d -w -o lib src/*.ls &",
+    "go": "node lib/app"
   },
   "dependencies": {
     "async": "*",
