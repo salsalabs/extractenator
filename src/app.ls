@@ -177,7 +177,7 @@ class Extractenator9000
         $ 'script[src*=js]'      .each -> task-list.push new FileTask org.uri, $(this), 'script', 'src'
         $ 'img:not([src^=data])' .each -> task-list.push new FileTask org.uri, $(this), 'img', 'src'
         # https://developer.mozilla.org/en-US/docs/Web/HTML/Link_types
-        $ 'link[rel=*icon]'      .each -> task-list.push new FileTask org.uri, $(this), 'img', 'href'
+        $ 'link[rel*=icon]'      .each -> task-list.push new FileTask org.uri, $(this), 'img', 'href'
         $ 'link[rel=stylesheet]' .each -> task-list.push new FileTask org.uri, $(this), 'css', 'href'
         $ 'style[src!=""]'       .each -> task-list.push new FileTask org.uri, $(this), 'style-x', ''
         reject @not-useful, task-list
@@ -212,7 +212,7 @@ class Extractenator9000
     # Method to handle "url(" in a declaration.
     process-decl-list: (t, obj, cb) ->
         # console.log "process-decl-list: #{t.to-string!}"
-        obj.stylesheet.rules.forEach (e) -> console.log e
+        # obj.stylesheet.rules.forEach (e) -> console.log e
         decls = obj.stylesheet.rules
             |> map (.declarations)
             |> flatten
@@ -227,7 +227,7 @@ class Extractenator9000
             |> flatten
             |> compact
             |> filter (declaration) -> /url/.test declaration.value
-        console.log "decls", decls
+        # console.log "decls", decls
         tasks = decls.map (it) -> new DeclTask t.resolved, it, '', ''
         err <~ async.each tasks, (t, cb) -> t.save-url-to-disk cb
         return cb err       
