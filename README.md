@@ -285,7 +285,7 @@ Here are some steps that you can use.
     * `css`
     * `font`
     * `image`
-    * `script`
+    * `javascript`
 
 9. Once the directories are created, then use these steps for each directory.
     1. Click to open the directory.
@@ -296,15 +296,14 @@ Here are some steps that you can use.
 <a name="troubleshooting"></a>
 ## Troubleshooting
 
-Start by reading the doc about [managing images and files](https://help.salsalabs.com/hc/en-us/articles/223342727-Managing-files-uploaded-to-Salsa).  This is not an optional step, so just click it and read.  
+Start by reading the doc about [managing images and files](https://help.salsalabs.com/hc/en-us/articles/223342727-Managing-files-uploaded-to-Salsa).  **This is not an optional step! Click and read!**  
 
 ### Template is missing a font or image.
 
 1. Copy the missing file from the client's website.
 2. Use the image browser to upload the file to Salsa.  To keep this consistent, you should put the missing file in the correct directory on Salsa (`css`, `font`, `image`, `script`, etc.).
 3. Edit the template to update the image (font, etc) URL.  Replace the URL with the Salsa relative URL.  For example, 
-
-`2. Use the image browser to upload the file to Salsa.  To keep this consistent, you should put the missing file in the correct directory on Salsa (`css`, `font`, `image`, `script`, etc.).`
+4. Use the image browser to upload the file to Salsa.  To keep this consistent, you should put the missing file in the correct directory on Salsa (`css`, `font`, `image`, `script`, etc.).`
 
 ### CSS file is missing a font or image.
 
@@ -341,4 +340,5 @@ to
 <a name="questions"></a>
 ## Questions?
 
-If you work for Salsa, then you can contact the author directly.  He's gonna be right there in the room.  If you do not work for Salsa, then [click here](#)
+[Click here](https://github.com/salsalabs/extractenator/issues).  Put @salsalabs in the body
+of the question, please.
