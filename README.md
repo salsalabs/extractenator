@@ -38,7 +38,7 @@ served up to browsers using HTTPS.  Doing this saves money for our customers and
 makes sure that pages like donation pages are secure when they are used.
 
 Copying resources form your website to Salsa is the most important thing that
-the Extractenator does.  Quite frankly, it's trivially easy to copy a website from 
+Extractenator 9000 does.  Quite frankly, it's trivially easy to copy a website from 
 one place to another.  The challenge is getting all of the files and making sure
 that all of the interdependencies are resolved.
 
@@ -55,12 +55,12 @@ At this writing, the Salsa template extractor is an ancient thing thing does not
 always extract pages correctly.  This causes both Salsa and its clients tons of 
 aggravation, irritation and additional cost, and I, for one, got fed up with that.
 
-Extractenator duplcates the existing extractor's capabilities. The template and
+Extractenator 9000 duplcates the existing extractor's capabilities. The template and
 all of the files referenced by the template are downloaded to Salsa.  The template
 is modified to correctly reference the downloaded files.
 
-In addition, Extractenator successfully extracts files that Salsa's extractor
-simply cannot handle.  Extractenator does the right thing with URLs requested from
+In addition, Extractenator 9000 successfully extracts files that Salsa's extractor
+simply cannot handle.  Extractenator 9000 does the right thing with URLs requested from
 websites, thus avoiding the `403` and `500` errors that plagues clients using the Salsa
 extractor.
 
@@ -71,15 +71,12 @@ or background image appear.
 
 This is definite upside for Salsa's clients.  Salsa's clients are outstanding at
 their jobs, but generally are not familiar with the internals of CSS.  Extractenator
-acknowledges that and does the right thing so that they don't have to be CSS gurus
+9000 acknowledges that and does the right thing so that they don't have to be CSS gurus
 to use Salsa.
 
 The resulting templates are both clean and secure.  Resource
 files required by the templates are stored in the same way that Salsa stores the
-files retrieved during a "template download".  Neither the client nor experienced
-Salsa support specialists will be able to tell the difference between a template 
-extracted by the Salsa extractor and one extracted by Extractenator.  (Okay, except
-the one created by Extractenator works correctly the first time it's used.)
+files retrieved during a "template download". 
 
 My hope is that this free-and-open version template extractor will reduce headaches
 and cost for all of us and leave us a bit more time for drinking really good coffee!
@@ -94,7 +91,7 @@ You will be sorely disappointed and they will be pissed off.
 <a name="got_a_problem"></a>
 ## Got a problem?
 [Click here](https://github.com/salsalabs/extractenator/issues "Click here
-to report any problems with the Extractenator") to report problems,
+to report any problems with Extractenator 9000") to report problems,
 make suggestions, offer funding or pass along a good joke.  Griping, whining
 and error reports that don't provide concrete examples may be deleted without
 being read.  Just sayin'...
@@ -132,7 +129,7 @@ Installing Extractenator 9000 requires these software packages.
 2. [LiveScript](http://livescript.net/ "LiveScript's Homepage")
 3. [Git](http://git-scm.com/ "Homepage for the Git source control program")
 
-A really, really easy way to install Node and LiveScript is to start with the [Node Versio manager (nvm)](https://github.com/creationix/nvm).  Use the installation steps to install `nvm` in your Linux/OSX home dir.  When you log back in again, then you can use these commands to install the correct version of node and LiveScript:
+A really, really easy way to install Node and LiveScript is to start with the [Node Version manager (nvm)](https://github.com/creationix/nvm).  Use the installation steps to install `nvm` in your Linux/OSX home dir.  When you log back in again, then you can use these commands to install the correct version of node and LiveScript:
 
 ```bash
 nvm install 6
@@ -142,7 +139,7 @@ npm install -g livescript
 The commands install the latest 6.x.x version of `node`, then the latest version of `LiveScript`.
 
 ### Setup
-* Clone the [Extractenator repository](https://github.com/salsalabs/extractenator)
+* Clone the [Extractenator 9000 repository](https://github.com/salsalabs/extractenator)
 ```bash
 cd YOUR_WORKSPACE_DIRECTORY
 git clone https://github.com/salsalabs/extractenator.git
@@ -155,7 +152,7 @@ npm run build
 ```
 * Ignore any warnings.
 * [Report errors here.](https://github.com/salsalabs/extractenator/issues
-"Click here to report any problems with the Extractenator")
+"Click here to report any problems with Extractenator 9000")
 
 That's it!  Extractenator is ready to use!
 
