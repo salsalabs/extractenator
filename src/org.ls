@@ -2,7 +2,7 @@ require! {
     '../spec.json': spec
 }
 
-# Class to represent an organization for the Extractinator 900 (tm).
+# Class to represent an organization for the Extractinator 9000.
 # chapter_KEY and filename are optional and should be null when unused.
 export class Org
     name: null
