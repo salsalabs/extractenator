@@ -28,6 +28,8 @@ class Task
     get-original: -> @original = null
  
     request: request.defaults do
+        # https://stackoverflow.com/questions/8880741/node-js-easy-http-requests-with-gzip-deflate-compression
+        gzip: true
         jar: true
         encoding: null
         headers:
@@ -73,12 +75,13 @@ class Task
         return cb null, null if @resolved.indexOf('data:') != -1
         (err, resp, body) <~ @request @resolved
         if err?
-            console.log "read-resolved caught #{err} on #{@resolved}"
+            console.log "read-resolved:#{@resolved}"
+            console.log "read-resolved: caught #{err}"
             return cb null, null
 
         @status-code = resp.statusCode
         @content-type = resp.headers.'content-type'
-        # console.log "Task:read-resolved: #{@status-code} on #{@resolved}"
+        console.log "Task:read-resolved: #{@status-code} on #{@resolved}" if @status-code != 200
         return cb null, body if @status-code == 200
         cb null, null
 
@@ -110,7 +113,7 @@ class Task
         err, body <~ @read-resolved
         console.log "save-url-to-disk: caught error #{err} while reading #{@resolved}" if err?
         return cb err if err?
-        console.log "save-url-to-disk: caught error 'empty body' with status #{@status-code} on #{@resolved}" unless body?
+        # console.log "save-url-to-disk: caught error 'empty body' with status #{@status-code} on #{@resolved}" unless body?
         return cb null unless body?
         err <~ @save-buffer-to-disk body
         console.log "save-url-to-disk: caught error #{err} while saving #{@resolved}" if err?
@@ -193,10 +196,11 @@ class Extractenator9000
         # err <~ @process-import-list t, obj
         # return cb err if err?
         try
-            console.log "process-css-buffer: stringifying the CSS, #{t.resolved}"
+            # console.log "process-css-buffer: stringifying the CSS, #{t.resolved}"
             return cb null, css.stringify obj
         catch thrown
-            console.log "process-css-buffer: caught css.stringify error #{thrown}"
+            console.log "process-css-buffer: #{t.resolved}"
+            console.log "process-css-buffer: css.stringify error #{thrown}"
             return cb null, body
 
     process-css-file-task: (t, cb) ~>
