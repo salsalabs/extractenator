@@ -192,7 +192,7 @@ Here's a sample of a new spec.json file:
 ```
 
 ### Configuration file details
-the `spec.json` file contains a list of fields that guide Extractenator 9000.  This section descripbes each field in detail.
+The `spec.json` file contains a list of fields that guide Extractenator 9000.  This section descripbes each field in detail.
 
 ### A note on `spec.json`'s file format
 
