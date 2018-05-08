@@ -102,7 +102,7 @@ being read.  Just sayin'...
 This package contains a program that
 
 * Reads a JSON configuration file that describes the extraction session.
-* Reads the cotnents of an HTML page.
+* Reads the contents of an HTML page.
 * Reads the pages resource files (CSS, script image) and stores them locally.
 * Modifies the template to reference the resource files as relative files in a Salsa image browser.
 * Modifies CSS files to reference resources as relative files in a Salsa image browser.
