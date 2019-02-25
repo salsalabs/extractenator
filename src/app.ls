@@ -275,7 +275,7 @@ class Extractenator9000
         $ = cheerio.load body.to-string!, 'utf-8'
         e = $ org.tag-selector
         switch e.length
-        | 0 => return cb "tag selector '#{org.tag-selector}' does not indentify a node"
+        | 0 => return cb "tag selector '#{org.tag-selector}' does not identify a node"
         | 1 =>
         | otherwise => return cb console.log "tag selector '#{org.tag-selector}' identifies #{e.length} nodes, must only identify one."
 
