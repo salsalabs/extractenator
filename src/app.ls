@@ -39,9 +39,15 @@ class Task
     clean-basename: (v) -> v .split /[\?\&\;\#]/ .0
 
     get-basename: ->
-        basename = (path.basename @resolved .split '?')[0]
-        return @clean-basename basename if path.extname basename .length > 0
-        extension = (@content-type .split '/' .1)
+        try
+            basename = (path.basename @resolved .split '?')[0]            
+            return @clean-basename basename if path.extname basename .length > 0
+            extension = (@content-type .split '/' .1)
+        catch thrown
+            console.log "get-basename: @resolved is a #{typeof @resolved}"
+            console.log "path.basename threw #{thrown}"
+            basename = "unknown"
+            extension="unknown"        
         return @clean-basename "#{basename || ++@@serial-number}.#{extension}"
 
     get-directory: ->
@@ -70,7 +76,7 @@ class Task
         @resolved = @original unless @resolved?
 
     read-resolved: (cb) ~>
-        # console.log "read-resolved: #{@to-string!} null resolved #{not @resolved?}"
+        console.log "read-resolved: #{@to-string!} null resolved #{not @resolved?}"
         return cb null, null unless @resolved?
         return cb null, null if @resolved.indexOf('data:') != -1
         (err, resp, body) <~ @request @resolved
