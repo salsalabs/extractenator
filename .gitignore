@@ -5,3 +5,4 @@ node_modules
 spec_files
 *spec.json
 .DS_Store
+o/*
